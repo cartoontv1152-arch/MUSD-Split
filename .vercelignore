@@ -1,0 +1,27 @@
+# deps
+node_modules/
+contracts/node_modules/
+# next
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+# env & secrets (only the example is committed)
+.env*
+!.env.example
+*.key
+*.pem
+secret.tmp
+# contracts build output
+contracts/cache/
+contracts/artifacts/
+contracts/typechain-types/
+contracts/coverage/
+# misc
+.vercel
+coverage/
+.DS_Store
+npm-debug.log*
+contracts/
+scripts/
+tests/

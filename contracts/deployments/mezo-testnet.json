@@ -1,0 +1,20 @@
+{
+  "chainId": 31611,
+  "contract": "MUSDSplitSettlement",
+  "address": "0x2d2F57887fA5a970344CeA9f1176BB761aFc2602",
+  "txHash": "0x1b9b0ddba43525b1fb363642f869011216440c7701b5997858e647002a48cc86",
+  "blockNumber": 16372569,
+  "gasUsed": "750000",
+  "deployer": "0x10ac9924a78051BdD770978740C5084205cdB628",
+  "musd": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+  "deployedAt": "2026-10-26T02:46:50.180Z",
+  "compiler": {
+    "version": "0.8.28",
+    "evmVersion": "london",
+    "optimizerRuns": 200
+  },
+  "explorer": {
+    "address": "https://explorer.test.mezo.org/address/0x2d2F57887fA5a970344CeA9f1176BB761aFc2602",
+    "tx": "https://explorer.test.mezo.org/tx/0x1b9b0ddba43525b1fb363642f869011216440c7701b5997858e647002a48cc86"
+  }
+}
