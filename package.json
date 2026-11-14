@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "description": "Group expense splitting with real MUSD settlement on Mezo testnet",
+  "homepage": "https://musd-split.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cartoontv1152-arch/MUSD-Split.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cartoontv1152-arch/MUSD-Split/issues"
+  },
   "engines": {
     "node": ">=22"
   },
