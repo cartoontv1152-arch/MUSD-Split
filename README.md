@@ -11,6 +11,7 @@
 | MUSD (testnet) | [`0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`](https://explorer.test.mezo.org/token/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503) |
 | Health | https://musd-split.vercel.app/api/health |
 | Live usage | https://musd-split.vercel.app/stats |
+| Source code | https://github.com/cartoontv1152-arch/MUSD-Split |
 | About, business model, roadmap | https://musd-split.vercel.app/about |
 | Security review | [`docs/SECURITY.md`](./docs/SECURITY.md) |
 | Submission answers | [`docs/SUBMISSION.md`](./docs/SUBMISSION.md) |
@@ -221,6 +222,7 @@ None of it is switched on during testnet. The team section lives in `src/config/
 ## Local setup
 
 ```bash
+git clone https://github.com/cartoontv1152-arch/MUSD-Split.git && cd MUSD-Split
 npm install
 vercel link --yes --project musd-split && vercel env pull .env.local --yes   # or copy .env.example
 npm run db:migrate          # idempotent SQL → schema "split" (001_init, 002_trove_settlements)

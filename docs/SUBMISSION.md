@@ -17,7 +17,7 @@ https://musd-split.vercel.app (Mezo testnet, chain 31611)
 `docs/demo/musd-split-demo.mp4` in the repository: a narrated walkthrough of the live site. Upload it (YouTube or Loom) wherever the form asks for a video link.
 
 **GitHub**
-_(your repository URL)_
+https://github.com/cartoontv1152-arch/MUSD-Split
 
 **Contracts**
 - MUSDSplitSettlement (ours, v3, source verified): https://explorer.test.mezo.org/address/0x07A97685C16fCd717a66c7cCf974fFfB6f8c2607
