@@ -5,6 +5,7 @@ import { Hero } from "@/components/landing/hero";
 import { LiveStrip } from "@/components/landing/live-strip";
 import { NetworkBadge } from "@/components/shell/app-shell";
 import { WalletMenu } from "@/components/wallet/wallet-menu";
+import { REPO_URL } from "@/config/app";
 import { explorerAddressUrl } from "@/config/chains";
 import { MEZO_POOLS, MUSD, SETTLEMENT_CONTRACT } from "@/config/contracts";
 import { MEZO_PROTOCOL } from "@/config/mezo";
@@ -205,6 +206,9 @@ export default function LandingPage() {
             </Link>
             <a href="https://mezo.org/docs/developers/" target="_blank" rel="noreferrer" className="hover:text-fg">
               Mezo docs
+            </a>
+            <a href={REPO_URL} target="_blank" rel="noreferrer" className="hover:text-fg">
+              Source code
             </a>
           </nav>
         </div>

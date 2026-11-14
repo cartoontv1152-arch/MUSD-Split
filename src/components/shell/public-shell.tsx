@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand";
 import { NetworkBadge } from "@/components/shell/app-shell";
+import { REPO_URL } from "@/config/app";
 import { WalletMenu } from "@/components/wallet/wallet-menu";
 
 /** Header + footer for public pages (about, usage). */
@@ -49,6 +50,9 @@ export function PublicShell({ children }: { children: ReactNode }) {
             <Link href="/legal" className="hover:text-fg">
               Terms and privacy
             </Link>
+            <a href={REPO_URL} target="_blank" rel="noreferrer" className="hover:text-fg">
+              Source code
+            </a>
           </nav>
         </div>
       </footer>

@@ -1,4 +1,5 @@
 export const APP_NAME = "MUSD Split";
+export const REPO_URL = "https://github.com/cartoontv1152-arch/MUSD-Split";
 export const APP_TAGLINE = "Split shared costs. Settle them in MUSD on Mezo.";
 export const APP_DESCRIPTION =
   "MUSD Split tracks group expenses, works out exactly who owes whom, and settles debts with real, verified MUSD transfers on the Mezo network.";
