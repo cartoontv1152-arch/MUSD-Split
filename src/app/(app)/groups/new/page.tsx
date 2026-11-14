@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { SignInGate } from "@/components/shell/gate";
-import { GroupIcon, groupColorOptions, groupColorSwatch, groupIconOptions } from "@/components/group-icon";
+import { GroupIcon, groupColorLabel, groupColorOptions, groupColorSwatchClass, groupIconOptions } from "@/components/group-icon";
 import { Button } from "@/components/ui/button";
 import { Field, Input, PageHeader, Panel, Textarea } from "@/components/ui/primitives";
 import { errorMessage, post } from "@/lib/client/api";
@@ -66,7 +66,7 @@ function NewGroup() {
                   onClick={() => setIcon(i)}
                   aria-pressed={icon === i}
                   aria-label={`Icon ${i}`}
-                  className={cn("rounded-[14px] p-0.5 ring-2", icon === i ? "ring-violet-400" : "ring-transparent")}
+                  className={cn("rounded-[14px] p-0.5 ring-2", icon === i ? "ring-blue-600" : "ring-transparent")}
                 >
                   <GroupIcon icon={i} color={color} size={40} />
                 </button>
@@ -74,17 +74,17 @@ function NewGroup() {
             </div>
           </fieldset>
           <fieldset>
-            <legend className="mb-2 text-[13px] font-medium">Colour</legend>
-            <div className="flex gap-2">
+            <legend className="mb-2 text-[13px] font-medium">Style</legend>
+            <div className="flex flex-wrap gap-2">
               {groupColorOptions.map((c) => (
                 <button
                   type="button"
                   key={c}
                   onClick={() => setColor(c)}
                   aria-pressed={color === c}
-                  aria-label={`Colour ${c}`}
-                  className={cn("size-8 rounded-full ring-2 ring-offset-2 ring-offset-ink-850", color === c ? "ring-fg" : "ring-transparent")}
-                  style={{ background: groupColorSwatch[c] }}
+                  aria-label={groupColorLabel[c]}
+                  title={groupColorLabel[c]}
+                  className={cn("size-8 rounded-[6px] border ring-2 ring-offset-2 ring-offset-paper", groupColorSwatchClass[c], color === c ? "ring-blue-600" : "ring-transparent")}
                 />
               ))}
             </div>
@@ -92,14 +92,14 @@ function NewGroup() {
           <fieldset className="space-y-3">
             <legend className="mb-1 text-[13px] font-medium">Invite settings</legend>
             <label className="flex items-start gap-3 text-[14px]">
-              <input type="checkbox" checked={membersCanInvite} onChange={(e) => setMembersCanInvite(e.target.checked)} className="mt-1 size-4 accent-violet-500" />
+              <input type="checkbox" checked={membersCanInvite} onChange={(e) => setMembersCanInvite(e.target.checked)} className="mt-1 size-4 accent-blue-600" />
               <span>
                 Any member can invite people
                 <span className="block text-[12.5px] text-fg-subtle">Otherwise only admins can create invite links.</span>
               </span>
             </label>
             <label className="flex items-start gap-3 text-[14px]">
-              <input type="checkbox" checked={simplifyDebts} onChange={(e) => setSimplifyDebts(e.target.checked)} className="mt-1 size-4 accent-violet-500" />
+              <input type="checkbox" checked={simplifyDebts} onChange={(e) => setSimplifyDebts(e.target.checked)} className="mt-1 size-4 accent-blue-600" />
               <span>
                 Simplify debts
                 <span className="block text-[12.5px] text-fg-subtle">Suggest the fewest payments that settle everyone. You can change this later.</span>

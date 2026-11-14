@@ -50,6 +50,44 @@ export const SETTLEMENT_CONTRACT = {
   maxBatch: 32,
 };
 
+/**
+ * Mezo Pools (Aerodrome/Velodrome-style AMM) on Mezo testnet. Verified on-chain 2026-11-14:
+ * router.defaultFactory() == factory; volatile BTC/MUSD pool 0xd16A…6AA9 and MEZO/MUSD pool
+ * 0x8eb8…B342 exist with liquidity; there are no stable pools for these pairs.
+ *
+ * BTC is Mezo's native gas token *and* an ERC-20 precompile at 0x7b7C…0000 — swapping it needs
+ * a normal `approve` to the router, and the wallet must keep some BTC back to pay gas.
+ */
+export const MEZO_POOLS = {
+  router: "0x9a1ff7FE3a0F69959A3fBa1F1e5ee18e1A9CD7E9" as const,
+  factory: "0x4947243CC818b627A5D06d14C4eCe7398A23Ce1A" as const,
+};
+
+export type SwapTokenId = "BTC" | "MEZO";
+export const SWAP_TOKENS: Record<SwapTokenId, { id: SwapTokenId; address: `0x${string}`; symbol: string; name: string; decimals: number; isGas: boolean }> = {
+  BTC: { id: "BTC", address: "0x7b7C000000000000000000000000000000000000", symbol: "BTC", name: "Bitcoin", decimals: 18, isGas: true },
+  MEZO: { id: "MEZO", address: "0x7B7c000000000000000000000000000000000001", symbol: "MEZO", name: "Mezo", decimals: 18, isGas: false },
+};
+
+/** BTC kept back for gas when a user swaps "max" BTC. */
+export const BTC_GAS_RESERVE = 20_000_000_000_000n; // 0.00002 BTC
+
+export const erc20Abi = parseAbi([
+  "function balanceOf(address account) view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)",
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+]);
+
+export const mezoRouterAbi = parseAbi([
+  "struct Route { address from; address to; bool stable; address factory; }",
+  "function defaultFactory() view returns (address)",
+  "function getAmountsOut(uint256 amountIn, Route[] routes) view returns (uint256[] amounts)",
+  "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, Route[] routes, address to, uint256 deadline) returns (uint256[] amounts)",
+]);
+
 /** Reference addresses of the MUSD protocol on testnet (shown on the Help page). */
 export const MEZO_PROTOCOL_TESTNET = {
   BorrowerOperations: "0xCdF7028ceAB81fA0C6971208e83fa7872994beE5",

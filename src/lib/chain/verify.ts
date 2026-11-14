@@ -4,9 +4,10 @@
  * receipt proves that exact payment.
  *
  * Checks: execution success, sender, tx target (MUSD token for direct transfers, the
- * MUSDSplitSettlement contract for contract settlements), the MUSD `Transfer` log
- * (token address, from, to, value), the contract `Settled` event (settlement id, from, to,
- * amount) and that the tx is not older than the intent.
+ * MUSDSplitSettlement contract for contract settlements, Mezo's BorrowerOperationsSignatures for
+ * "borrow against BTC and pay"), the MUSD `Transfer` log (token address, from, to, value), the
+ * contract `Settled` event (settlement id, from, to, amount), for trove payments the protocol's
+ * `TroveUpdated` event for the payer's own trove, and that the tx is not older than the intent.
  */
 
 import { decodeEventLog, getAddress, isAddressEqual, parseAbiItem, toEventSelector, type Hex } from "viem";
@@ -15,7 +16,12 @@ export const TRANSFER_EVENT = parseAbiItem("event Transfer(address indexed from,
 export const SETTLED_EVENT = parseAbiItem(
   "event Settled(bytes32 indexed settlementId, address indexed from, address indexed to, uint256 amount)",
 );
+export const TROVE_UPDATED_EVENT = parseAbiItem(
+  "event TroveUpdated(address indexed _borrower, uint256 _principal, uint256 _interest, uint256 _coll, uint256 _stake, uint16 _interestRate, uint256 _lastInterestUpdateTime, uint8 _operation)",
+);
 export const TRANSFER_TOPIC = toEventSelector(TRANSFER_EVENT);
+export const TROVE_UPDATED_TOPIC = toEventSelector(TROVE_UPDATED_EVENT);
+const ZERO = "0x0000000000000000000000000000000000000000";
 export const SETTLED_TOPIC = toEventSelector(SETTLED_EVENT);
 
 export interface ReceiptLog {
@@ -34,7 +40,7 @@ export interface ReceiptLike {
   logs: readonly ReceiptLog[];
 }
 
-export type SettlementMethod = "direct" | "contract";
+export type SettlementMethod = "direct" | "contract" | "trove";
 
 export interface ExpectedPayment {
   method: SettlementMethod;
@@ -50,6 +56,9 @@ export interface ExpectedPayment {
 export interface VerifyContext {
   musd: string;
   settlementContract?: string;
+  /** Mezo BorrowerOperations (emits TroveUpdated) and BorrowerOperationsSignatures (tx target) */
+  borrowerOperations?: string;
+  borrowerOperationsSignatures?: string;
 }
 
 export type VerifyResult =
@@ -67,7 +76,9 @@ export type RejectCode =
   | "AMOUNT_MISMATCH"
   | "NO_SETTLED_EVENT"
   | "SETTLED_MISMATCH"
-  | "CONTRACT_NOT_CONFIGURED";
+  | "CONTRACT_NOT_CONFIGURED"
+  | "NOT_TROVE_BORROW"
+  | "NOT_PAYERS_TROVE";
 
 const eq = (a: string | null | undefined, b: string | null | undefined) =>
   !!a && !!b && isAddressEqual(getAddress(a), getAddress(b));
@@ -149,6 +160,32 @@ export function verifyPaymentReceipt(receipt: ReceiptLike, exp: ExpectedPayment,
       return { outcome: "rejected", code: "NOT_MUSD_TRANSFER", reason: "This is not a direct MUSD transfer" };
     }
     const t = findTransfer(transfers, exp);
+    if ("outcome" in t) return t;
+    return { outcome: "confirmed", logIndex: t.logIndex, blockNumber: receipt.blockNumber };
+  }
+
+  if (exp.method === "trove") {
+    if (!ctx.borrowerOperations || !ctx.borrowerOperationsSignatures) {
+      return { outcome: "rejected", code: "CONTRACT_NOT_CONFIGURED", reason: "Mezo trove contracts are not configured" };
+    }
+    if (!eq(receipt.to, ctx.borrowerOperationsSignatures)) {
+      return { outcome: "rejected", code: "NOT_TROVE_BORROW", reason: "This transaction did not borrow MUSD from a Mezo trove" };
+    }
+    // the debt must land on the PAYER's own trove — someone else's credit line can't settle your debt
+    const ownTrove = receipt.logs.some((l) => {
+      if (!eq(l.address, ctx.borrowerOperations) || l.topics[0]?.toLowerCase() !== TROVE_UPDATED_TOPIC.toLowerCase()) return false;
+      try {
+        const d = decodeEventLog({ abi: [TROVE_UPDATED_EVENT], data: l.data, topics: l.topics as [Hex, ...Hex[]] });
+        return eq(d.args._borrower, exp.from);
+      } catch {
+        return false;
+      }
+    });
+    if (!ownTrove) {
+      return { outcome: "rejected", code: "NOT_PAYERS_TROVE", reason: "The MUSD was not borrowed from the payer's own trove" };
+    }
+    // freshly minted MUSD (from 0x0) must go straight to the creditor, exact amount
+    const t = findTransfer(transfers, { ...exp, from: ZERO });
     if ("outcome" in t) return t;
     return { outcome: "confirmed", logIndex: t.logIndex, blockNumber: receipt.blockNumber };
   }

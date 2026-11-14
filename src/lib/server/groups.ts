@@ -131,7 +131,7 @@ export interface SettlementRow {
   from_address: string;
   to_address: string;
   amount: string;
-  method: "direct" | "contract" | "contract_permit" | "batch" | "batch_permit";
+  method: "direct" | "contract" | "contract_permit" | "trove" | "batch" | "batch_permit";
   settlement_key: string;
   status: SettlementStatus;
   tx_hash: string | null;

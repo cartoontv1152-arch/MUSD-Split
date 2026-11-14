@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
 import {
   SETTLED_EVENT,
+  TROVE_UPDATED_EVENT,
   TRANSFER_EVENT,
   decodeMusdTransfers,
   verifyPaymentReceipt,
@@ -155,5 +156,67 @@ describe("settlement contract verification", () => {
   });
   it("is rejected when no contract is configured", () => {
     expect(verifyPaymentReceipt(good, exp, { musd: MUSD })).toMatchObject({ code: "CONTRACT_NOT_CONFIGURED" });
+  });
+});
+
+describe("Mezo trove borrow-and-pay verification (withdrawMUSDWithSignature → creditor)", () => {
+  const BO = "0xCdF7028ceAB81fA0C6971208e83fa7872994beE5";
+  const BOS = "0xD757e3646AF370b15f32EB557F0F8380Df7D639e";
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  const PCV = "0x0000000000000000000000000000000000000abc";
+  const tctx = { ...ctx, borrowerOperations: BO, borrowerOperationsSignatures: BOS };
+  const trove = { method: "trove" as const, from: BOB, to: ALICE, amount: M(30), minBlock: 90n };
+  function troveUpdatedLog(borrower: string, logIndex = 5, emitter = BO): ReceiptLog {
+    return {
+      address: emitter,
+      topics: encodeEventTopics({ abi: [TROVE_UPDATED_EVENT], eventName: "TroveUpdated", args: { _borrower: borrower as Hex } }) as Hex[],
+      data: encodeAbiParameters(
+        [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint16" }, { type: "uint256" }, { type: "uint8" }],
+        [M(2030), 0n, M(1), M(1), 100, 1_700_000_000n, 1],
+      ),
+      logIndex,
+    };
+  }
+  const troveReceipt = (over: Partial<ReceiptLike> = {}) =>
+    receipt({
+      to: BOS,
+      // fee mint to the protocol, then the borrowed MUSD minted straight to the creditor
+      logs: [transferLog(MUSD, ZERO, PCV, M(30) / 1000n, 1), transferLog(MUSD, ZERO, ALICE, M(30), 2), troveUpdatedLog(BOB)],
+      ...over,
+    });
+
+  it("confirms MUSD minted from the payer's own trove straight to the creditor", () => {
+    expect(verifyPaymentReceipt(troveReceipt(), trove, tctx)).toEqual({ outcome: "confirmed", logIndex: 2, blockNumber: 100n });
+  });
+  it("requires the tx to go through BorrowerOperationsSignatures", () => {
+    expect(verifyPaymentReceipt(troveReceipt({ to: BO }), trove, tctx)).toMatchObject({ outcome: "rejected", code: "NOT_TROVE_BORROW" });
+  });
+  it("rejects borrowing from someone else's trove", () => {
+    const logs = [transferLog(MUSD, ZERO, ALICE, M(30), 2), troveUpdatedLog(CHARLIE)];
+    expect(verifyPaymentReceipt(troveReceipt({ logs }), trove, tctx)).toMatchObject({ outcome: "rejected", code: "NOT_PAYERS_TROVE" });
+  });
+  it("ignores TroveUpdated events from a contract that isn't BorrowerOperations", () => {
+    const logs = [transferLog(MUSD, ZERO, ALICE, M(30), 2), troveUpdatedLog(BOB, 5, FAKE_TOKEN)];
+    expect(verifyPaymentReceipt(troveReceipt({ logs }), trove, tctx)).toMatchObject({ outcome: "rejected", code: "NOT_PAYERS_TROVE" });
+  });
+  it("rejects a borrow minted to the payer instead of the creditor", () => {
+    const logs = [transferLog(MUSD, ZERO, BOB, M(30), 2), troveUpdatedLog(BOB)];
+    expect(verifyPaymentReceipt(troveReceipt({ logs }), trove, tctx)).toMatchObject({ outcome: "rejected", code: "RECIPIENT_MISMATCH" });
+  });
+  it("rejects a smaller borrow than the debt being settled", () => {
+    const logs = [transferLog(MUSD, ZERO, ALICE, M(29), 2), troveUpdatedLog(BOB)];
+    expect(verifyPaymentReceipt(troveReceipt({ logs }), trove, tctx)).toMatchObject({ outcome: "rejected", code: "AMOUNT_MISMATCH" });
+  });
+  it("rejects a mint from a look-alike token", () => {
+    const logs = [transferLog(FAKE_TOKEN, ZERO, ALICE, M(30), 2), troveUpdatedLog(BOB)];
+    expect(verifyPaymentReceipt(troveReceipt({ logs }), trove, tctx)).toMatchObject({ outcome: "rejected", code: "NO_TRANSFER" });
+  });
+  it("rejects a borrow sent by another wallet, or older than the intent", () => {
+    expect(verifyPaymentReceipt(troveReceipt({ from: CHARLIE }), trove, tctx)).toMatchObject({ code: "SENDER_MISMATCH" });
+    expect(verifyPaymentReceipt(troveReceipt({ blockNumber: 50n }), trove, tctx)).toMatchObject({ code: "TX_TOO_OLD" });
+  });
+  it("marks a reverted borrow as failed and refuses when Mezo contracts aren't configured", () => {
+    expect(verifyPaymentReceipt(troveReceipt({ status: "reverted", logs: [] }), trove, tctx)).toMatchObject({ outcome: "failed" });
+    expect(verifyPaymentReceipt(troveReceipt(), trove, ctx)).toMatchObject({ code: "CONTRACT_NOT_CONFIGURED" });
   });
 });

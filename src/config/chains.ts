@@ -54,6 +54,12 @@ export const GAS_FLOORS = {
   settleWithPermit: 300_000n,
   settleBatchBase: 250_000n,
   settleBatchPerItem: 90_000n,
+  /** Mezo trove operations re-sort the trove list and update interest; estimates run ~0.5-0.9M */
+  troveBorrow: 1_200_000n,
+  troveAdjust: 1_000_000n,
+  troveOpen: 1_600_000n,
+  /** Mezo Pools swapExactTokensForTokens (single hop) */
+  swap: 450_000n,
 } as const;
 
 export function gasWithFloor(estimate: bigint | undefined | null, floor: bigint): bigint {

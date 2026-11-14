@@ -23,7 +23,7 @@ export function SignInGate({ children, title = "Connect your wallet to continue"
   if (address) return <>{children}</>;
   return (
     <Panel className="mx-auto mt-10 max-w-[520px] px-8 py-10 text-center">
-      <div className="mx-auto mb-5 grid size-14 place-items-center rounded-2xl border border-line-strong bg-ink-800 text-violet-300">
+      <div className="mx-auto mb-5 grid size-14 place-items-center rounded-2xl border border-line-strong bg-wash text-blue-600">
         <Wallet className="size-6" />
       </div>
       <h1 className="font-display text-[22px] font-semibold tracking-[-0.02em]">{title}</h1>

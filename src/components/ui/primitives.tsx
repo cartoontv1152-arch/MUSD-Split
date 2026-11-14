@@ -42,21 +42,40 @@ export function PageHeader({
   );
 }
 
+/**
+ * Tones, in three colours. Names are historical; meaning is what matters:
+ *   mint   = verified / settled      -> solid blue
+ *   violet = info / brand            -> blue tint
+ *   cyan   = owed to you             -> blue outline
+ *   sky    = pending / in progress   -> blue outline, dashed
+ *   amber  = you owe / needs action  -> black outline
+ *   rose   = failed / rejected       -> solid black
+ *   neutral                          -> grey
+ */
 type Tone = "neutral" | "violet" | "cyan" | "amber" | "mint" | "rose" | "sky";
 const tones: Record<Tone, string> = {
-  neutral: "bg-ink-750 text-fg-muted border-line-strong",
-  violet: "bg-violet-500/12 text-violet-300 border-violet-500/30",
-  cyan: "bg-cyan-400/10 text-cyan-300 border-cyan-400/30",
-  amber: "bg-amber-400/10 text-amber-300 border-amber-400/30",
-  mint: "bg-mint-400/10 text-mint-400 border-mint-400/30",
-  rose: "bg-rose-400/10 text-rose-400 border-rose-400/30",
-  sky: "bg-sky-400/10 text-sky-400 border-sky-400/30",
+  neutral: "bg-wash text-fg-muted border-line",
+  violet: "bg-blue-50 text-blue-700 border-blue-200",
+  cyan: "bg-paper text-blue-700 border-blue-600",
+  amber: "bg-paper text-fg border-fg",
+  mint: "bg-blue-600 text-white border-blue-600",
+  rose: "bg-fg text-white border-fg",
+  sky: "bg-paper text-blue-700 border-blue-600 border-dashed",
+};
+const calloutTones: Record<Tone, string> = {
+  neutral: "bg-wash border-line",
+  violet: "bg-blue-50 border-blue-200",
+  cyan: "bg-blue-50 border-blue-200",
+  amber: "bg-paper border-fg",
+  mint: "bg-blue-50 border-blue-600",
+  rose: "bg-paper border-fg border-l-4",
+  sky: "bg-blue-50 border-blue-200",
 };
 
 export function Badge({ tone = "neutral", className, children, ...p }: HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
   return (
     <span
-      className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] leading-5 font-medium whitespace-nowrap", tones[tone], className)}
+      className={cn("inline-flex items-center gap-1 rounded-[4px] border px-1.5 py-px text-[12px] leading-5 font-medium whitespace-nowrap", tones[tone], className)}
       {...p}
     >
       {children}
@@ -72,7 +91,7 @@ export function Field({ label, hint, error, children, htmlFor, className }: { la
       </label>
       {children}
       {error ? (
-        <p className="text-[12.5px] text-rose-400" role="alert">
+        <p className="flex items-center gap-1 text-[12.5px] font-medium text-fg" role="alert">
           {error}
         </p>
       ) : hint ? (
@@ -83,7 +102,7 @@ export function Field({ label, hint, error, children, htmlFor, className }: { la
 }
 
 const control =
-  "w-full rounded-[var(--radius-control)] border border-line-strong bg-ink-950/60 px-3 text-[14px] text-fg placeholder:text-fg-subtle/80 transition-colors hover:border-[#3a4677] focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-60 aria-[invalid=true]:border-rose-500/70";
+  "w-full rounded-[var(--radius-control)] border border-line-strong bg-paper px-3 text-[14px] text-fg placeholder:text-fg-subtle transition-colors hover:border-fg-subtle focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 disabled:bg-wash disabled:opacity-70 aria-[invalid=true]:border-2 aria-[invalid=true]:border-fg";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...p }, ref) {
   return <input ref={ref} className={cn(control, "h-10", className)} {...p} />;
@@ -99,7 +118,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
       ref={ref}
       className={cn(
         control,
-        "h-10 appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23a6acd0%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:14px] bg-[position:right_12px_center] bg-no-repeat pr-9",
+        "h-10 appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666666%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:14px] bg-[position:right_12px_center] bg-no-repeat pr-9",
         className,
       )}
       {...p}
@@ -110,13 +129,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 });
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-[10px] bg-ink-750/80", className)} aria-hidden="true" />;
+  return <div className={cn("animate-pulse rounded-[6px] bg-wash", className)} aria-hidden="true" />;
 }
 
 export function EmptyState({ icon, title, children, action, className }: { icon?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode; className?: string }) {
   return (
     <div className={cn("flex flex-col items-center px-6 py-12 text-center", className)}>
-      {icon && <div className="mb-4 grid size-12 place-items-center rounded-2xl border border-line-strong bg-ink-800 text-violet-300">{icon}</div>}
+      {icon && <div className="mb-4 grid size-12 place-items-center rounded-[var(--radius-card)] bg-blue-50 text-blue-600">{icon}</div>}
       <h3 className="font-display text-[17px] font-semibold text-fg">{title}</h3>
       {children && <div className="mt-1.5 max-w-[46ch] text-[14px] text-fg-muted">{children}</div>}
       {action && <div className="mt-5">{action}</div>}
@@ -125,7 +144,7 @@ export function EmptyState({ icon, title, children, action, className }: { icon?
 }
 
 export function Kbd({ children }: { children: ReactNode }) {
-  return <kbd className="rounded-[5px] border border-line-strong bg-ink-800 px-1.5 py-px font-sans text-[11px] text-fg-muted">{children}</kbd>;
+  return <kbd className="rounded-[5px] border border-line-strong bg-wash px-1.5 py-px font-sans text-[11px] text-fg-muted">{children}</kbd>;
 }
 
 export function StatRow({ label, children, className }: { label: ReactNode; children: ReactNode; className?: string }) {
@@ -139,7 +158,7 @@ export function StatRow({ label, children, className }: { label: ReactNode; chil
 
 export function Callout({ tone = "violet", title, children, className, icon }: { tone?: Tone; title?: ReactNode; children?: ReactNode; className?: string; icon?: ReactNode }) {
   return (
-    <div className={cn("flex gap-3 rounded-[12px] border px-4 py-3 text-[13.5px]", tones[tone], className)} role="status">
+    <div className={cn("flex gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-[13.5px] text-fg", calloutTones[tone], className)} role="status">
       {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
       <div className="min-w-0 text-fg-muted">
         {title && <div className="mb-0.5 font-medium text-fg">{title}</div>}

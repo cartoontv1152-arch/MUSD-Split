@@ -67,10 +67,10 @@ function Inner() {
               {data.settlements.map((s) => {
                 const out = s.from === me;
                 return (
-                  <tr key={s.id} className="hover:bg-ink-800/40">
+                  <tr key={s.id} className="hover:bg-wash/40">
                     <td className="px-5 py-3">
                       <Link href={`/settlements/${s.id}`} className="flex items-center gap-2">
-                        {out ? <ArrowUpRight className="size-4 text-amber-300" /> : <ArrowDownLeft className="size-4 text-cyan-300" />}
+                        {out ? <ArrowUpRight className="size-4 text-fg" /> : <ArrowDownLeft className="size-4 text-blue-600" />}
                         <span>
                           {out ? "To " : "From "}
                           <MemberName address={out ? s.to : s.from} profiles={data.profiles} className="font-medium" />

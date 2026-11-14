@@ -43,7 +43,7 @@ export function SuggestedSettlements({ b }: { b: GroupBundle }) {
               <li key={t.from + t.to} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="flex min-w-0 items-center gap-2 text-[14px]">
                   <MemberName address={t.from} profiles={b.profiles} me={me} withAvatar className="font-medium" />
-                  <ArrowRight className="size-4 shrink-0 text-cyan-400" aria-label="pays" />
+                  <ArrowRight className="size-4 shrink-0 text-blue-600" aria-label="pays" />
                   <MemberName address={t.to} profiles={b.profiles} me={me} withAvatar className="font-medium" />
                 </div>
                 <div className="flex items-center gap-3">
@@ -215,7 +215,7 @@ export function ExpensesTab({ b }: { b: GroupBundle }) {
             const mine = e.participants.find((p) => p.address === b.me.address);
             return (
               <li key={e.id}>
-                <Link href={`/groups/${b.group.id}/expenses/${e.id}`} className="flex items-center gap-4 px-5 py-3 hover:bg-ink-800/50">
+                <Link href={`/groups/${b.group.id}/expenses/${e.id}`} className="flex items-center gap-4 px-5 py-3 hover:bg-wash/50">
                   <div className="hidden w-12 shrink-0 text-center sm:block">
                     <div className="text-[11px] text-fg-subtle uppercase">{formatDate(e.date, { month: "short" })}</div>
                     <div className="num font-display text-[18px] leading-tight font-semibold">{formatDate(e.date, { day: "numeric" })}</div>

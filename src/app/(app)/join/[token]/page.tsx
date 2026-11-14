@@ -67,7 +67,7 @@ export default function JoinPage() {
       </p>
       <div className="mt-7">
         {!usable ? (
-          <p className="text-[14px] text-amber-300">
+          <p className="text-[14px] text-fg">
             {data.state === "revoked" ? "This invite was revoked." : data.state === "expired" ? "This invite has expired." : "This invite has been used up."} Ask for a new link.
           </p>
         ) : !address ? (
@@ -76,7 +76,7 @@ export default function JoinPage() {
               Connect wallet to join
             </Button>
             <p className="text-[12.5px] text-fg-subtle">Then sign a free message to prove the wallet is yours.</p>
-            <button className="text-[12.5px] text-violet-300 hover:underline" onClick={() => signIn()} disabled={signingIn}>
+            <button className="text-[12.5px] text-blue-600 hover:underline" onClick={() => signIn()} disabled={signingIn}>
               Already connected? Sign in
             </button>
           </div>

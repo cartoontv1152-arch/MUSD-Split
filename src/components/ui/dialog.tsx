@@ -27,7 +27,7 @@ export function Dialog({
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal>
-        <D.Overlay className="fixed inset-0 z-50 bg-ink-950/70 backdrop-blur-[2px] data-[state=open]:animate-in" />
+        <D.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in" />
         <D.Content
           className={cn(
             "surface-raised fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-32px)] w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-panel)] focus:outline-none",
@@ -44,7 +44,7 @@ export function Dialog({
                 <D.Description className="sr-only">{typeof title === "string" ? title : "Dialog"}</D.Description>
               )}
             </div>
-            <D.Close className="-mr-2 rounded-lg p-2 text-fg-subtle hover:bg-ink-750 hover:text-fg" aria-label="Close">
+            <D.Close className="-mr-2 rounded-[var(--radius-control)] p-2 text-fg-subtle hover:bg-wash hover:text-fg" aria-label="Close">
               <X className="size-4" />
             </D.Close>
           </div>

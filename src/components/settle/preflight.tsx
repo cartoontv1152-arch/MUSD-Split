@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { useGasBalance, useMusdBalance, useWalletState } from "@/lib/client/hooks";
 import { Amount } from "@/components/money";
 import { FAUCET_URL } from "@/config/chains";
+import Link from "next/link";
+import type { MezoPosition } from "@/lib/client/mezo";
+import { maxAdditionalBorrow } from "@/lib/mezo/trove-math";
 
 export interface PreflightState {
   ready: boolean;
@@ -17,7 +20,10 @@ export interface PreflightState {
 }
 
 /** The checks Feature 7 requires before any signature: wallet, network, identity, balance, gas. */
-export function usePreflight(required: bigint): PreflightState {
+export function usePreflight(required: bigint, opts: { method?: string; position?: MezoPosition } = {}): PreflightState {
+  const viaTrove = opts.method === "trove";
+  const pos = opts.position;
+  const troveRoom = pos?.trove.active ? maxAdditionalBorrow(pos.trove, pos.params, pos.recoveryMode ? pos.params.ccr : pos.params.mcr) : 0n;
   const { address: session, openConnect, signIn, signingIn } = useSession();
   const w = useWalletState();
   const net = useNetworkActions();
@@ -52,7 +58,30 @@ export function usePreflight(required: bigint): PreflightState {
         </Button>
       ),
     },
-    {
+    viaTrove
+      ? {
+          ok: pos === undefined ? null : pos.trove.active && troveRoom >= required,
+          label:
+            pos === undefined ? (
+              "Reading your Mezo trove…"
+            ) : !pos.trove.active ? (
+              "You don't have a Mezo trove to borrow from"
+            ) : troveRoom >= required ? (
+              <>
+                Your trove can lend up to <Amount value={troveRoom} />
+              </>
+            ) : (
+              <>
+                Your trove can only lend <Amount value={troveRoom} /> more
+              </>
+            ),
+          action: pos && (!pos.trove.active || troveRoom < required) && (
+            <Button size="sm" variant="secondary" asChild>
+              <Link href="/wallet">{pos.trove.active ? "Add BTC" : "Open one"}</Link>
+            </Button>
+          ),
+        }
+      : {
       ok: musd.data === undefined ? null : musd.data >= required,
       label:
         musd.data === undefined ? (
@@ -77,7 +106,7 @@ export function usePreflight(required: bigint): PreflightState {
         ) : (
           <>
             No BTC for gas —{" "}
-            <a href={FAUCET_URL} target="_blank" rel="noreferrer" className="text-violet-300 underline">
+            <a href={FAUCET_URL} target="_blank" rel="noreferrer" className="text-blue-600 underline">
               get some from the faucet
             </a>
           </>
@@ -94,9 +123,9 @@ export function PreflightList({ rows }: { rows: PreflightState["rows"] }) {
         <li key={i} className="flex min-h-9 items-center justify-between gap-3 text-[13.5px]">
           <span className="flex items-center gap-2.5">
             {r.ok === true ? (
-              <CheckCircle2 className="size-4 shrink-0 text-mint-400" aria-label="OK" />
+              <CheckCircle2 className="size-4 shrink-0 text-blue-600" aria-label="OK" />
             ) : r.ok === false ? (
-              <CircleAlert className="size-4 shrink-0 text-amber-300" aria-label="Needs attention" />
+              <CircleAlert className="size-4 shrink-0 text-fg" aria-label="Needs attention" />
             ) : (
               <Loader2 className="size-4 shrink-0 animate-spin text-fg-subtle" aria-label="Checking" />
             )}

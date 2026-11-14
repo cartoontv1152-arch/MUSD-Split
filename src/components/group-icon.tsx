@@ -16,19 +16,20 @@ const ICONS: Record<string, LucideIcon> = {
   "shopping-bag": ShoppingBag,
 };
 
+/** Stored colour keys are historical; each now maps to one blue/black/white tile style. */
 const COLORS: Record<string, string> = {
-  violet: "text-violet-300 bg-violet-500/12 border-violet-500/30",
-  cyan: "text-cyan-300 bg-cyan-400/10 border-cyan-400/30",
-  amber: "text-amber-300 bg-amber-400/10 border-amber-400/30",
-  mint: "text-mint-400 bg-mint-400/10 border-mint-400/30",
-  rose: "text-rose-400 bg-rose-400/10 border-rose-400/30",
-  sky: "text-sky-400 bg-sky-400/10 border-sky-400/30",
+  violet: "bg-blue-600 text-white border-blue-600",
+  cyan: "bg-fg text-white border-fg",
+  amber: "bg-blue-50 text-blue-700 border-blue-200",
+  mint: "bg-paper text-blue-700 border-blue-600",
+  rose: "bg-paper text-fg border-fg",
+  sky: "bg-wash text-fg border-line",
 };
 
 export function GroupIcon({ icon, color, size = 40, className }: { icon: string; color: string; size?: number; className?: string }) {
   const I = ICONS[icon] ?? Users;
   return (
-    <span className={cn("grid shrink-0 place-items-center rounded-[12px] border", COLORS[color] ?? COLORS.violet, className)} style={{ width: size, height: size }}>
+    <span className={cn("grid shrink-0 place-items-center rounded-[var(--radius-card)] border", COLORS[color] ?? COLORS.violet, className)} style={{ width: size, height: size }}>
       <I style={{ width: size * 0.45, height: size * 0.45 }} aria-hidden="true" />
     </span>
   );
@@ -36,11 +37,13 @@ export function GroupIcon({ icon, color, size = 40, className }: { icon: string;
 
 export const groupIconOptions = Object.keys(ICONS);
 export const groupColorOptions = Object.keys(COLORS);
-export const groupColorSwatch: Record<string, string> = {
-  violet: "#8a6cff",
-  cyan: "#46ddeb",
-  amber: "#ffb45c",
-  mint: "#45e3a6",
-  rose: "#ff7a8f",
-  sky: "#6cb8ff",
+export const groupColorLabel: Record<string, string> = {
+  violet: "Blue",
+  cyan: "Black",
+  amber: "Light blue",
+  mint: "Blue outline",
+  rose: "Black outline",
+  sky: "Grey",
 };
+/** Tile classes for the colour picker swatches. */
+export const groupColorSwatchClass = COLORS;

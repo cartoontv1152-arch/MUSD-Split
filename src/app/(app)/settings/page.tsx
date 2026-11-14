@@ -73,7 +73,7 @@ function Inner() {
             <div className="flex items-center gap-4">
               <Avatar address={address!} profile={user} size={64} />
               <div className="flex flex-wrap gap-2">
-                <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-[10px] border border-line-strong px-3 text-[13px] hover:bg-ink-800">
+                <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-[10px] border border-line-strong px-3 text-[13px] hover:bg-wash">
                   <Upload className="size-4" /> Upload picture
                   <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
                 </label>
@@ -132,8 +132,8 @@ function Inner() {
             <PanelHeader title="Network status" />
             <dl className="divide-y divide-line px-5 pb-4">
               <StatRow label="Network">Mezo testnet · chain 31611</StatRow>
-              <StatRow label="Your wallet">{!w.isConnected ? "—" : w.onMezo ? "On Mezo testnet" : <span className="text-amber-300">Other network ({w.chainId})</span>}</StatRow>
-              <StatRow label="RPC">{network.data?.ok ? <span className="text-mint-400">Healthy</span> : network.isError ? <span className="text-rose-400">Unreachable</span> : "Checking…"}</StatRow>
+              <StatRow label="Your wallet">{!w.isConnected ? "—" : w.onMezo ? "On Mezo testnet" : <span className="text-fg">Other network ({w.chainId})</span>}</StatRow>
+              <StatRow label="RPC">{network.data?.ok ? <span className="text-blue-600">Healthy</span> : network.isError ? <span className="text-fg">Unreachable</span> : "Checking…"}</StatRow>
               <StatRow label="Latest block">{network.data?.blockNumber ? <span className="num">{Number(network.data.blockNumber).toLocaleString()}</span> : "—"}</StatRow>
               <StatRow label="MUSD token">
                 <AddressChip address={MUSD.address} />

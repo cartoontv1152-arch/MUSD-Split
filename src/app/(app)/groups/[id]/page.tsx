@@ -88,10 +88,10 @@ function GroupSettings({ b, open, onOpenChange }: { b: GroupBundle; open: boolea
           <Textarea id="gs-desc" value={description} maxLength={280} onChange={(e) => setDescription(e.target.value)} />
         </Field>
         <label className="flex items-center gap-3 text-[14px]">
-          <input type="checkbox" className="size-4 accent-violet-500" checked={membersCanInvite} onChange={(e) => setMCI(e.target.checked)} /> Any member can invite people
+          <input type="checkbox" className="size-4 accent-blue-600" checked={membersCanInvite} onChange={(e) => setMCI(e.target.checked)} /> Any member can invite people
         </label>
         <label className="flex items-center gap-3 text-[14px]">
-          <input type="checkbox" className="size-4 accent-violet-500" checked={simplifyDebts} onChange={(e) => setSD(e.target.checked)} /> Simplify debts (fewest payments)
+          <input type="checkbox" className="size-4 accent-blue-600" checked={simplifyDebts} onChange={(e) => setSD(e.target.checked)} /> Simplify debts (fewest payments)
         </label>
       </div>
     </Dialog>
@@ -196,11 +196,11 @@ function GroupInner() {
             <Tabs.Trigger
               key={v}
               value={v}
-              className="relative shrink-0 px-3 pt-1 pb-3 text-[14px] text-fg-muted transition-colors hover:text-fg data-[state=active]:text-fg data-[state=active]:after:absolute data-[state=active]:after:inset-x-2 data-[state=active]:after:bottom-[-1px] data-[state=active]:after:h-[2px] data-[state=active]:after:rounded-full data-[state=active]:after:bg-violet-500"
+              className="relative shrink-0 px-3 pt-1 pb-3 text-[14px] text-fg-muted transition-colors hover:text-fg data-[state=active]:text-fg data-[state=active]:after:absolute data-[state=active]:after:inset-x-2 data-[state=active]:after:bottom-[-1px] data-[state=active]:after:h-[2px] data-[state=active]:after:rounded-full data-[state=active]:after:bg-blue-600"
             >
               {label}
               {v === "requests" && b.requests.filter((r) => r.status === "pending" && r.payer === me).length > 0 && (
-                <span className="ml-1.5 rounded-full bg-amber-400/15 px-1.5 text-[11px] text-amber-300">{b.requests.filter((r) => r.status === "pending" && r.payer === me).length}</span>
+                <span className="ml-1.5 rounded-full bg-fg/15 px-1.5 text-[11px] text-fg">{b.requests.filter((r) => r.status === "pending" && r.payer === me).length}</span>
               )}
             </Tabs.Trigger>
           ))}
@@ -215,7 +215,7 @@ function GroupInner() {
               <PanelHeader
                 title="Recent activity"
                 action={
-                  <Link href={`/groups/${id}?tab=activity`} className="text-[13px] text-violet-300 hover:underline">
+                  <Link href={`/groups/${id}?tab=activity`} className="text-[13px] text-blue-600 hover:underline">
                     Full feed
                   </Link>
                 }

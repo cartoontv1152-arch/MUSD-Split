@@ -41,7 +41,7 @@ export function useNetworkActions() {
   };
 }
 
-const item = "flex cursor-pointer items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13.5px] text-fg-muted outline-none data-[highlighted]:bg-ink-750 data-[highlighted]:text-fg";
+const item = "flex cursor-pointer items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13.5px] text-fg-muted outline-none data-[highlighted]:bg-wash-2 data-[highlighted]:text-fg";
 
 export function WalletMenu() {
   const { address: session, user, signIn, signOut, openConnect, signingIn, mismatch } = useSession();
@@ -68,10 +68,10 @@ export function WalletMenu() {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button className="flex h-9 items-center gap-2 rounded-[10px] border border-line-strong bg-ink-850 pr-2 pl-1.5 text-[13px] hover:border-violet-500/50">
+        <button className="flex h-9 items-center gap-2 rounded-[10px] border border-line-strong bg-paper pr-2 pl-1.5 text-[13px] hover:border-blue-600/50">
           <Avatar address={addr} profile={user} size={24} />
           <span className="hidden font-medium text-fg sm:inline">{user?.displayName || shortAddress(addr)}</span>
-          {!w.onMezo && w.isConnected && <span className="size-2 rounded-full bg-amber-400" aria-label="Wrong network" />}
+          {!w.onMezo && w.isConnected && <span className="size-2 rounded-full bg-fg" aria-label="Wrong network" />}
           <ChevronDown className="size-3.5 text-fg-subtle" />
         </button>
       </DropdownMenu.Trigger>
@@ -85,12 +85,12 @@ export function WalletMenu() {
                 <div className="font-mono text-[12px] text-fg-subtle">{shortAddress(addr, 8, 6)}</div>
               </div>
             </div>
-            <div className="mt-3 rounded-[10px] border border-line bg-ink-900/60 px-3 py-2">
+            <div className="mt-3 rounded-[10px] border border-line bg-wash/60 px-3 py-2">
               <div className="text-[12px] text-fg-subtle">MUSD balance (on-chain)</div>
               <div className="text-[16px] font-semibold">{bal.data !== undefined ? <Amount value={bal.data} /> : bal.isError ? "Unavailable" : "Loading…"}</div>
             </div>
-            {!w.isConnected && <p className="mt-2 text-[12px] text-amber-300">Wallet disconnected — reconnect to pay.</p>}
-            {w.isConnected && !w.onMezo && <p className="mt-2 text-[12px] text-amber-300">Your wallet is on another network.</p>}
+            {!w.isConnected && <p className="mt-2 text-[12px] text-fg">Wallet disconnected — reconnect to pay.</p>}
+            {w.isConnected && !w.onMezo && <p className="mt-2 text-[12px] text-fg">Your wallet is on another network.</p>}
           </div>
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
           {w.isConnected && !w.onMezo && (

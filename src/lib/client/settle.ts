@@ -4,6 +4,7 @@ import { getAddress, parseSignature, type Hex } from "viem";
 import { getBlock, getPublicClient, readContract, signTypedData, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { CHAIN_ID, GAS_FLOORS, gasWithFloor } from "@/config/chains";
 import { MUSD, SETTLEMENT_CONTRACT, musdAbi } from "@/config/contracts";
+import { borrowAndPay, readMezoPosition } from "./mezo";
 import { wagmiConfig } from "./wagmi";
 import { post } from "./api";
 import type { Settlement } from "./types";
@@ -90,7 +91,7 @@ async function ensureAllowance(owner: Addr, amount: bigint, onStep?: (s: string)
 }
 
 export async function sendSettlement(opts: {
-  method: "direct" | "contract" | "contract_permit";
+  method: "direct" | "contract" | "contract_permit" | "trove";
   from: string;
   to: string;
   amount: bigint;
@@ -100,6 +101,13 @@ export async function sendSettlement(opts: {
   const owner = getAddress(opts.from) as Addr;
   const to = getAddress(opts.to) as Addr;
   const { amount, settlementKey: id, onStep } = opts;
+
+  if (opts.method === "trove") {
+    // fresh trove state for exact hints and a last capacity check
+    onStep?.("Reading your Mezo trove…");
+    const position = await readMezoPosition(owner);
+    return borrowAndPay({ borrower: owner, recipient: to, amount, position, onStep });
+  }
 
   if (opts.method === "direct") {
     const gas = gasWithFloor(

@@ -1,14 +1,19 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, FileCheck2, Fuel, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, FileCheck2, Fuel, Landmark, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SignInGate } from "@/components/shell/gate";
 import { PreflightList, usePreflight } from "@/components/settle/preflight";
 import { SettlementProgress } from "@/components/settle/progress";
+import { TroveHealth } from "@/components/mezo/trove-health";
+import { SwapPanel } from "@/components/mezo/swap-panel";
+import { useMezoPosition } from "@/lib/client/use-mezo";
+import { afterBorrow } from "@/lib/mezo/trove-math";
+import { MEZO_PROTOCOL } from "@/config/mezo";
 import { Amount, methodLabel } from "@/components/money";
 import { AddressChip, Avatar, displayName } from "@/components/identity";
 import { Button } from "@/components/ui/button";
@@ -24,9 +29,16 @@ import { maxSettleable } from "@/lib/engine/settlement";
 import { parseAmount, toDecimalString } from "@/lib/engine/money";
 import type { Settlement } from "@/lib/client/types";
 
-type Method = "direct" | "contract_permit" | "contract";
+type Method = "direct" | "contract_permit" | "contract" | "trove";
 const METHODS: Array<{ id: Method; title: string; body: string; Icon: typeof Zap; floor: bigint }> = [
   { id: "direct", title: "Direct transfer", body: "One MUSD transfer from your wallet to theirs. Simplest.", Icon: Zap, floor: GAS_FLOORS.erc20Transfer },
+  {
+    id: "trove",
+    title: "Borrow against your BTC",
+    body: "Sign once and Mezo mints MUSD from your trove straight to them. No MUSD in your wallet needed.",
+    Icon: Landmark,
+    floor: GAS_FLOORS.troveBorrow,
+  },
   {
     id: "contract_permit",
     title: "Settlement contract",
@@ -51,6 +63,7 @@ function SettleInner() {
   const { id } = useParams<{ id: string }>();
   const sp = useSearchParams();
   const qc = useQueryClient();
+  const router = useRouter();
   const to = (sp.get("to") ?? "").toLowerCase();
   const requestId = sp.get("request");
   const expenseId = sp.get("expense");
@@ -77,7 +90,8 @@ function SettleInner() {
       return null;
     }
   }, [amountStr]);
-  const pre = usePreflight(amount ?? 0n);
+  const position = useMezoPosition(b?.me.address);
+  const pre = usePreflight(amount ?? 0n, { method, position: position.data });
 
   const max = (() => {
     if (!b) return 0n;
@@ -118,6 +132,7 @@ function SettleInner() {
     setBusy(true);
     setStep("Recording the payment intent…");
     let current: Settlement | null = null;
+    let sentHash: `0x${string}` | null = null;
     try {
       const { settlement: created } = await post<{ settlement: Settlement }>(`/api/groups/${id}/settlements`, {
         to,
@@ -129,9 +144,19 @@ function SettleInner() {
       current = created;
       setSettlement(created);
       const hash = await sendSettlement({ method, from: me, to, amount, settlementKey: created.settlementKey, onStep: setStep });
+      sentHash = hash;
       setStep("Saving the transaction hash…");
-      // persist the hash BEFORE waiting, so a refresh never loses track of the payment
-      const { settlement: submitted } = await post<{ settlement: Settlement }>(`/api/settlements/${created.id}/submit`, { txHash: hash });
+      // persist the hash BEFORE waiting, so a refresh never loses track of the payment.
+      // Retry network/server hiccups; a 4xx is a real answer and is shown as-is.
+      let submitted: Settlement | null = null;
+      for (let attempt = 0; !submitted; attempt++) {
+        try {
+          submitted = (await post<{ settlement: Settlement }>(`/api/settlements/${created.id}/submit`, { txHash: hash })).settlement;
+        } catch (err) {
+          if (attempt >= 3 || (err instanceof ApiClientError && err.status < 500)) throw err;
+          await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        }
+      }
       setSettlement(submitted);
       setStep("Waiting for Mezo testnet to confirm and verifying the receipt…");
       const final = await followVerification(created.id, hash, setSettlement);
@@ -140,7 +165,13 @@ function SettleInner() {
       else if (final?.status === "rejected") toast.error("The transaction didn't match this payment");
       void qc.invalidateQueries();
     } catch (e) {
-      if (current && current.status === "created") {
+      if (sentHash && current) {
+        // The wallet broadcast the transaction, so MUSD may have moved: never say "not sent".
+        toast.error("Payment sent, but not recorded yet", {
+          description: "Your transaction is on its way. On the payment page, press Check again or Find my payment on-chain.",
+        });
+        router.push(`/settlements/${current.id}`);
+      } else if (current && current.status === "created") {
         if (isUserRejection(e)) {
           await post(`/api/settlements/${current.id}/cancel`).catch(() => undefined);
           toast.message("Cancelled in your wallet", { description: "Nothing was sent." });
@@ -225,36 +256,86 @@ function SettleInner() {
             <Panel className="p-6">
               <div className="mb-3 text-[13px] font-medium">How to pay</div>
               <div role="radiogroup" aria-label="Payment method" className="grid gap-2">
-                {METHODS.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={method === m.id}
-                    onClick={() => setMethod(m.id)}
-                    className={cn(
-                      "flex items-start gap-3 rounded-[12px] border px-4 py-3 text-left transition-colors",
-                      method === m.id ? "border-violet-500 bg-violet-500/10" : "border-line-strong bg-ink-900/40 hover:border-[#3a4677]",
-                    )}
-                  >
-                    <m.Icon className={cn("mt-0.5 size-5 shrink-0", method === m.id ? "text-violet-300" : "text-fg-subtle")} />
-                    <span>
-                      <span className="block text-[14.5px] font-medium">{m.title}</span>
-                      <span className="block text-[12.5px] text-fg-muted">{m.body}</span>
-                    </span>
-                  </button>
-                ))}
+                {METHODS.map((m) => {
+                  const noTrove = m.id === "trove" && position.data && !position.data.trove.active;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={method === m.id}
+                      onClick={() => setMethod(m.id)}
+                      className={cn(
+                        "flex items-start gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-left transition-colors",
+                        method === m.id ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600" : "border-line-strong bg-paper hover:border-fg",
+                      )}
+                    >
+                      <m.Icon className={cn("mt-0.5 size-5 shrink-0", method === m.id ? "text-blue-600" : "text-fg-subtle")} />
+                      <span>
+                        <span className="flex flex-wrap items-center gap-2 text-[14.5px] font-medium">
+                          {m.title}
+                          {m.id === "trove" && <span className="rounded-[4px] border border-blue-600 px-1.5 text-[11px] font-medium text-blue-700">Mezo trove</span>}
+                        </span>
+                        <span className="block text-[12.5px] text-fg-muted">{noTrove ? "You don't have a trove yet. Open one on the Wallet page to use this." : m.body}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              {method !== "direct" && (
+              {method === "trove" && (
+                <p className="mt-3 text-[12px] text-fg-subtle">
+                  You sign a WithdrawMUSD message for exactly this amount and this person, then send it through Mezo&apos;s{" "}
+                  <a className="font-mono text-blue-600 hover:underline" href={`https://explorer.test.mezo.org/address/${MEZO_PROTOCOL.BorrowerOperationsSignatures}`} target="_blank" rel="noreferrer">
+                    BorrowerOperationsSignatures
+                  </a>
+                  . The new MUSD never touches your wallet; your trove debt grows by the amount plus a 0.1% fee.
+                </p>
+              )}
+              {method !== "direct" && method !== "trove" && (
                 <p className="mt-3 text-[12px] text-fg-subtle">
                   Contract{" "}
-                  <a className="font-mono text-violet-300 hover:underline" href={`https://explorer.test.mezo.org/address/${SETTLEMENT_CONTRACT.address}`} target="_blank" rel="noreferrer">
+                  <a className="font-mono text-blue-600 hover:underline" href={`https://explorer.test.mezo.org/address/${SETTLEMENT_CONTRACT.address}`} target="_blank" rel="noreferrer">
                     {SETTLEMENT_CONTRACT.address.slice(0, 10)}…
                   </a>{" "}
                   is non-custodial: it pulls MUSD from you straight to the recipient in the same transaction and never holds funds.
                 </p>
               )}
             </Panel>
+            {method === "trove" && position.data?.trove.active && (
+              <TroveHealth
+                position={position.data}
+                compact
+                projected={
+                  amount
+                    ? (() => {
+                        const a = afterBorrow(position.data.trove, position.data.params, amount);
+                        return { ratio: a.ratio, liquidationPrice: a.liquidationPrice, debt: a.debt, label: "after paying" };
+                      })()
+                    : null
+                }
+              />
+            )}
+            {method !== "trove" && amount && pre.musdBalance !== undefined && pre.musdBalance < amount && (
+              <Panel className="p-6">
+                <h2 className="font-display text-[17px] font-semibold">
+                  You&apos;re <Amount value={amount - pre.musdBalance} /> short
+                </h2>
+                <p className="mt-1 text-[13.5px] text-fg-muted">
+                  Swap BTC or MEZO for exactly what&apos;s missing on Mezo Pools, then pay.
+                  {position.data?.trove.active && (
+                    <>
+                      {" "}
+                      Or{" "}
+                      <button type="button" className="font-medium text-blue-600 underline underline-offset-2" onClick={() => setMethod("trove")}>
+                        borrow it against your BTC
+                      </button>{" "}
+                      and pay in one step.
+                    </>
+                  )}
+                </p>
+                <SwapPanel className="mt-4" owner={me} position={position.data} targetMusd={amount - pre.musdBalance} />
+              </Panel>
+            )}
           </div>
           <div className="space-y-5 lg:sticky lg:top-20 lg:self-start">
             <Panel className="p-5">
@@ -265,7 +346,7 @@ function SettleInner() {
               <dl className="divide-y divide-line">
                 <StatRow label="You send">{amount ? <Amount value={amount} exact /> : "—"}</StatRow>
                 <StatRow label="Method">{methodLabel(method)}</StatRow>
-                <StatRow label="Network">Mezo testnet · 31611</StatRow>
+                <StatRow label="Network">Mezo testnet (31611)</StatRow>
                 <StatRow
                   label={
                     <span className="inline-flex items-center gap-1.5">
@@ -295,12 +376,12 @@ function SettleInner() {
               Go back
             </Button>
             <Button onClick={execute} loading={busy}>
-              Send {amount ? toDecimalString(amount) : ""} MUSD
+              {method === "trove" ? "Borrow and pay" : "Send"} {amount ? toDecimalString(amount) : ""} MUSD
             </Button>
           </>
         }
       >
-        <div className="rounded-[12px] border border-line bg-ink-900/60 p-4">
+        <div className="rounded-[var(--radius-card)] border border-line bg-wash p-4">
           <div className="text-center">
             <div className="font-display text-[34px] font-semibold">{amount && <Amount value={amount} exact />}</div>
             <div className="mt-1 text-[13px] text-fg-muted">to {displayName(to, prof)}</div>
@@ -308,7 +389,7 @@ function SettleInner() {
           </div>
           <dl className="mt-4 divide-y divide-line border-t border-line">
             <StatRow label="Method">{methodLabel(method)}</StatRow>
-            <StatRow label="Token">MUSD · 0x1189…c503</StatRow>
+            <StatRow label="Token">{method === "trove" ? "MUSD, newly minted from your trove" : "MUSD (0x1189…c503)"}</StatRow>
             <StatRow label="From">{me.slice(0, 10)}…</StatRow>
           </dl>
         </div>

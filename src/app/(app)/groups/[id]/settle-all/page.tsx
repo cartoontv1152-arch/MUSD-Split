@@ -13,7 +13,8 @@ import { MemberName, TxLink } from "@/components/identity";
 import { Button } from "@/components/ui/button";
 import { Callout, PageHeader, Panel, PanelHeader, Skeleton } from "@/components/ui/primitives";
 import { useGroup } from "@/lib/client/hooks";
-import { errorMessage, isUserRejection, post } from "@/lib/client/api";
+import { ApiClientError, errorMessage, isUserRejection, post } from "@/lib/client/api";
+import { cn } from "@/lib/client/cn";
 import { sendBatch, waitForReceiptLenient } from "@/lib/client/settle";
 import type { Settlement } from "@/lib/client/types";
 
@@ -37,6 +38,8 @@ function Inner() {
   const [batch, setBatch] = useState<BatchDTO | null>(null);
   const [step, setStep] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [usePermit, setUsePermit] = useState(true);
+  const method = usePermit ? "batch_permit" : "batch";
   const route = b ? (b.group.simplifyDebts ? b.ledger.simplified : b.ledger.pairwise).filter((t) => t.from === b.me.address) : [];
   const total = route.reduce((a, t) => a + BigInt(t.amount), 0n);
   const pre = usePreflight(total);
@@ -45,32 +48,49 @@ function Inner() {
   async function run() {
     setBusy(true);
     let created: BatchDTO | null = null;
+    let sentHash: string | null = null;
     try {
       setStep("Recording the batch…");
-      created = await post<BatchDTO>(`/api/groups/${id}/settlements/batch`, { method: "batch_permit" });
+      created = await post<BatchDTO>(`/api/groups/${id}/settlements/batch`, { method });
       setBatch(created);
       const hash = await sendBatch({
-        method: "batch_permit",
+        method,
         from: b!.me.address,
         items: created.items.map((i) => ({ settlementKey: i.settlementKey, to: i.to, amount: BigInt(i.amount) })),
         onStep: setStep,
       });
+      sentHash = hash;
       setStep("Saving the transaction hash…");
-      let cur = await post<BatchDTO>(`/api/settlement-batches/${created.batch.id}/submit`, { txHash: hash });
+      let cur: BatchDTO | null = null;
+      for (let attempt = 0; !cur; attempt++) {
+        try {
+          cur = await post<BatchDTO>(`/api/settlement-batches/${created.batch.id}/submit`, { txHash: hash });
+        } catch (err) {
+          if (attempt >= 3 || (err instanceof ApiClientError && err.status < 500)) throw err;
+          await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        }
+      }
       setBatch(cur);
       setStep("Waiting for confirmation and verifying every payment…");
       await waitForReceiptLenient(hash);
       for (let i = 0; i < 30 && !["confirmed", "failed", "rejected"].includes(cur.batch.status); i++) {
         await new Promise((r) => setTimeout(r, 3000));
-        cur = await post<BatchDTO>(`/api/settlement-batches/${created.batch.id}/verify`).catch(() => cur);
+        const prev: BatchDTO = cur;
+        cur = await post<BatchDTO>(`/api/settlement-batches/${created.batch.id}/verify`).catch(() => prev);
         setBatch(cur);
       }
       if (cur.batch.status === "confirmed") toast.success("All payments confirmed in one transaction");
       void qc.invalidateQueries();
     } catch (e) {
-      if (isUserRejection(e)) toast.message("Cancelled in your wallet — nothing was sent");
-      else toast.error("Batch not completed", { description: errorMessage(e) });
-      if (created && created.batch.status === "created") setBatch(null);
+      if (sentHash && created) {
+        // broadcast already happened: keep the batch on screen with its hash, never say "not sent"
+        toast.error("Batch sent, but not recorded yet", { description: "Keep this page open; it will be checked again. Your transaction is on its way." });
+        setBatch({ ...created, batch: { ...created.batch, txHash: sentHash, status: "submitted" } });
+      } else {
+        if (isUserRejection(e)) toast.message("Cancelled in your wallet. Nothing was sent.");
+        else toast.error("Batch not completed", { description: errorMessage(e) });
+        if (created && created.batch.status === "created") setBatch(null);
+      }
     } finally {
       setBusy(false);
       setStep(null);
@@ -86,7 +106,7 @@ function Inner() {
           </Link>
         }
         title="Settle everything you owe"
-        description="Pay every creditor in this group with one permit signature and one transaction through the MUSD Split settlement contract."
+        description="Pay everyone you owe in this group in one transaction through the MUSD Split settlement contract."
       />
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
         <Panel>
@@ -115,7 +135,7 @@ function Inner() {
           {batch?.batch.txHash && (
             <Panel className="p-5 text-[14px]">
               <div className="flex items-center gap-2">
-                {batch.batch.status === "confirmed" ? <CheckCircle2 className="size-5 text-mint-400" /> : <Layers className="size-5 text-violet-300" />}
+                {batch.batch.status === "confirmed" ? <CheckCircle2 className="size-5 text-blue-600" /> : <Layers className="size-5 text-blue-600" />}
                 <span className="font-medium">{batch.batch.status === "confirmed" ? "All confirmed on-chain" : `Batch ${batch.batch.status}`}</span>
               </div>
               <div className="mt-2">
@@ -127,8 +147,26 @@ function Inner() {
           <Panel className="p-5">
             <h2 className="mb-3 font-display text-[16px] font-semibold">Before you send</h2>
             <PreflightList rows={pre.rows} />
+            <div role="radiogroup" aria-label="Approval method" className="mt-4 grid gap-2 text-[13.5px]">
+              {[
+                [true, "One signature (permit)", "Sign a free permit for the total, then one transaction."],
+                [false, "Approve first", "For wallets that can't sign permits: an approval, then the batch."],
+              ].map(([v, t, d]) => (
+                <button
+                  key={String(v)}
+                  type="button"
+                  role="radio"
+                  aria-checked={usePermit === v}
+                  onClick={() => setUsePermit(v as boolean)}
+                  className={cn("rounded-[var(--radius-card)] border px-3 py-2 text-left", usePermit === v ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600" : "border-line-strong hover:border-fg")}
+                >
+                  <span className="block font-medium">{t as string}</span>
+                  <span className="block text-[12.5px] text-fg-muted">{d as string}</span>
+                </button>
+              ))}
+            </div>
             <Callout tone="violet" className="mt-4">
-              You sign a permit for exactly <Amount value={total} />. The contract moves MUSD from you directly to each creditor and keeps nothing.
+              You authorise exactly <Amount value={total} />. The contract moves MUSD from you directly to each person and keeps nothing.
             </Callout>
             <Button size="lg" className="mt-4 w-full" loading={busy} disabled={!pre.ready || route.length === 0 || (!!batch && batch.batch.status !== "created")} onClick={run}>
               <Layers className="size-4" /> {busy ? (step ?? "Working…") : `Pay ${route.length} people in one transaction`}

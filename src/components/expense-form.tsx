@@ -191,7 +191,7 @@ export function ExpenseForm({ b, initial, mode }: { b: GroupBundle; initial?: Ex
               id="ex-payer"
               value={payer}
               onChange={(e) => setPayer(e.target.value)}
-              className="h-10 w-full rounded-[var(--radius-control)] border border-line-strong bg-ink-950/60 px-3 text-[14px]"
+              className="h-10 w-full rounded-[var(--radius-control)] border border-line-strong bg-paper/60 px-3 text-[14px]"
             >
               {pool.map((a) => (
                 <option key={a} value={a}>
@@ -217,8 +217,8 @@ export function ExpenseForm({ b, initial, mode }: { b: GroupBundle; initial?: Ex
               <div className="sm:col-span-2">
                 <div className="mb-1.5 text-[13px] font-medium">Receipt</div>
                 {receipt ? (
-                  <div className="flex items-center gap-2 rounded-[10px] border border-line-strong bg-ink-900/60 px-3 py-2 text-[13.5px]">
-                    <Paperclip className="size-4 text-violet-300" />
+                  <div className="flex items-center gap-2 rounded-[10px] border border-line-strong bg-wash/60 px-3 py-2 text-[13.5px]">
+                    <Paperclip className="size-4 text-blue-600" />
                     <a href={`/api/receipts/${receipt.id}`} target="_blank" rel="noreferrer" className="flex-1 truncate hover:underline">
                       {receipt.name}
                     </a>
@@ -227,8 +227,8 @@ export function ExpenseForm({ b, initial, mode }: { b: GroupBundle; initial?: Ex
                     </button>
                   </div>
                 ) : (
-                  <label className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-dashed border-line-strong px-4 py-3 text-[13.5px] text-fg-muted hover:border-violet-500/50">
-                    <FileUp className="size-4 text-violet-300" />
+                  <label className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-dashed border-line-strong px-4 py-3 text-[13.5px] text-fg-muted hover:border-blue-600/50">
+                    <FileUp className="size-4 text-blue-600" />
                     {uploading ? "Uploading…" : "Attach a photo or PDF (max 2 MB) — only group members can see it"}
                     <input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="sr-only" disabled={uploading} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
                   </label>
@@ -274,7 +274,7 @@ export function ExpenseForm({ b, initial, mode }: { b: GroupBundle; initial?: Ex
                 onClick={() => setMethod(m)}
                 className={cn(
                   "rounded-[12px] border px-3 py-2.5 text-left transition-colors",
-                  method === m ? "border-violet-500 bg-violet-500/10" : "border-line-strong bg-ink-900/40 hover:border-[#3a4677]",
+                  method === m ? "border-blue-600 bg-blue-600/10" : "border-line-strong bg-wash/40 hover:border-fg-subtle",
                 )}
               >
                 <div className="text-[14px] font-medium">{label}</div>
@@ -298,7 +298,7 @@ export function ExpenseForm({ b, initial, mode }: { b: GroupBundle; initial?: Ex
               const on = selected.includes(a);
               return (
                 <li key={a} className="flex items-center gap-3 px-3 py-2.5">
-                  <input type="checkbox" checked={on} onChange={() => toggle(a)} className="size-4 accent-violet-500" aria-label={`Include ${b.profiles[a]?.displayName ?? a}`} />
+                  <input type="checkbox" checked={on} onChange={() => toggle(a)} className="size-4 accent-blue-600" aria-label={`Include ${b.profiles[a]?.displayName ?? a}`} />
                   <div className={cn("min-w-0 flex-1", !on && "opacity-50")}>{ownerOf(a)}</div>
                   {on && method === "custom" && (
                     <Input
@@ -328,7 +328,7 @@ export function ExpenseForm({ b, initial, mode }: { b: GroupBundle; initial?: Ex
             })}
           </ul>
           {method === "percentage" && (
-            <p className={cn("mt-2 text-[12.5px]", pctTotal === 10000 ? "text-mint-400" : "text-amber-300")}>Total {formatBps(Math.round(pctTotal))}% of 100%</p>
+            <p className={cn("mt-2 text-[12.5px]", pctTotal === 10000 ? "text-blue-600" : "text-fg")}>Total {formatBps(Math.round(pctTotal))}% of 100%</p>
           )}
           {method === "custom" && amount && (
             <p className="mt-2 text-[12.5px] text-fg-muted">
@@ -360,7 +360,7 @@ export function ExpenseForm({ b, initial, mode }: { b: GroupBundle; initial?: Ex
           {preview.shares && (
             <div className="mt-4 border-t border-line pt-3 text-[13px] text-fg-muted">
               {ownerName(payer, b)} {payer === b.me.address ? "are" : "is"} owed{" "}
-              <Amount className="text-cyan-300" value={preview.shares.filter((s) => s.member !== payer).reduce((a, s) => a + s.share, 0n)} />
+              <Amount className="text-blue-600" value={preview.shares.filter((s) => s.member !== payer).reduce((a, s) => a + s.share, 0n)} />
             </div>
           )}
         </Panel>

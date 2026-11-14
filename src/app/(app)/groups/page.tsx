@@ -115,7 +115,7 @@ function GroupsInner() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {list.map((g) => (
-            <Link key={g.id} href={`/groups/${g.id}`} className="surface group block rounded-[var(--radius-panel)] p-5 transition-colors hover:border-violet-500/40">
+            <Link key={g.id} href={`/groups/${g.id}`} className="surface group block rounded-[var(--radius-panel)] p-5 transition-colors hover:border-blue-600/40">
               <div className="flex items-start gap-3">
                 <GroupIcon icon={g.icon} color={g.color} />
                 <div className="min-w-0 flex-1">

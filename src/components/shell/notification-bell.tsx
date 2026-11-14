@@ -20,12 +20,12 @@ export function NotificationBell() {
     <Popover.Root>
       <Popover.Trigger asChild>
         <button
-          className="relative grid size-9 place-items-center rounded-[10px] text-fg-muted hover:bg-ink-800 hover:text-fg"
+          className="relative grid size-9 place-items-center rounded-[10px] text-fg-muted hover:bg-wash hover:text-fg"
           aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
         >
           <Bell className="size-[18px]" />
           {unread > 0 && (
-            <span className="num absolute -top-0.5 -right-0.5 min-w-[18px] rounded-full bg-violet-500 px-1 text-center text-[10.5px] leading-[18px] font-semibold text-white">
+            <span className="num absolute -top-0.5 -right-0.5 min-w-[18px] rounded-full bg-blue-600 px-1 text-center text-[10.5px] leading-[18px] font-semibold text-white">
               {unread > 99 ? "99+" : unread}
             </span>
           )}
@@ -36,7 +36,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <span className="font-display text-[15px] font-semibold">Notifications</span>
             {unread > 0 && (
-              <button onClick={markAll} className="text-[12.5px] text-violet-300 hover:underline">
+              <button onClick={markAll} className="text-[12.5px] text-blue-600 hover:underline">
                 Mark all as read
               </button>
             )}
@@ -48,9 +48,9 @@ export function NotificationBell() {
                   <Link
                     href={n.href ?? "/notifications"}
                     onClick={() => !n.readAt && post("/api/notifications", { ids: [n.id] }).then(() => qc.invalidateQueries({ queryKey: ["notifications"] }))}
-                    className="flex gap-3 px-4 py-2.5 hover:bg-ink-750"
+                    className="flex gap-3 px-4 py-2.5 hover:bg-wash-2"
                   >
-                    <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-violet-400")} />
+                    <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-blue-600")} />
                     <span className="min-w-0">
                       <span className="block text-[13.5px] leading-snug text-fg">{n.title}</span>
                       {n.body && <span className="mt-0.5 block truncate text-[12.5px] text-fg-muted">{n.body}</span>}
@@ -67,7 +67,7 @@ export function NotificationBell() {
           </ul>
           <div className="border-t border-line px-4 py-2.5 text-right">
             <Popover.Close asChild>
-              <Link href="/notifications" className="text-[12.5px] text-violet-300 hover:underline">
+              <Link href="/notifications" className="text-[12.5px] text-blue-600 hover:underline">
                 Open notification centre
               </Link>
             </Popover.Close>

@@ -25,3 +25,9 @@ npm-debug.log*
 contracts/
 scripts/
 tests/
+
+.playwright-mcp/
+docs/
+scripts/
+*.md
+!README.md

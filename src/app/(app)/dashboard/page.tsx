@@ -12,6 +12,8 @@ import { useSession } from "@/components/providers/session";
 import { api } from "@/lib/client/api";
 import { categoryLabel } from "@/config/app";
 import { formatDate, relativeTime } from "@/lib/client/cn";
+import { btc, pct, useMezoPosition, usd } from "@/lib/client/use-mezo";
+import { healthBand } from "@/lib/mezo/trove-math";
 import type { Expense, GroupSummary, PaymentRequest, Profiles, Recurring, Settlement } from "@/lib/client/types";
 
 interface Dashboard {
@@ -40,19 +42,19 @@ function PositionStrip({ owes, owed }: { owes: bigint; owed: bigint }) {
   return (
     <Panel raised className="overflow-hidden">
       <div className="grid gap-px bg-line sm:grid-cols-3">
-        <div className="bg-ink-800 px-6 py-5">
+        <div className="bg-wash px-6 py-5">
           <div className="text-[13px] text-fg-muted">You owe</div>
-          <div className="mt-1 font-display text-[30px] leading-tight font-semibold text-amber-300">
+          <div className="mt-1 font-display text-[30px] leading-tight font-semibold text-fg">
             <Amount value={owes} />
           </div>
         </div>
-        <div className="bg-ink-800 px-6 py-5">
+        <div className="bg-wash px-6 py-5">
           <div className="text-[13px] text-fg-muted">Owed to you</div>
-          <div className="mt-1 font-display text-[30px] leading-tight font-semibold text-cyan-300">
+          <div className="mt-1 font-display text-[30px] leading-tight font-semibold text-blue-600">
             <Amount value={owed} />
           </div>
         </div>
-        <div className="bg-ink-800 px-6 py-5">
+        <div className="bg-wash px-6 py-5">
           <div className="text-[13px] text-fg-muted">Net position</div>
           <div className="mt-1 font-display text-[30px] leading-tight font-semibold">
             <Amount value={owed - owes} signed tone="auto" />
@@ -60,15 +62,64 @@ function PositionStrip({ owes, owed }: { owes: bigint; owed: bigint }) {
         </div>
       </div>
       <div className="px-6 py-3">
-        <div className="flex h-2 overflow-hidden rounded-full bg-ink-750" aria-hidden="true">
+        <div className="flex h-2 overflow-hidden rounded-full bg-wash-2" aria-hidden="true">
           {total > 0n && (
             <>
-              <div className="bg-amber-400" style={{ width: `${owePct}%` }} />
-              <div className="bg-cyan-400" style={{ width: `${100 - owePct}%` }} />
+              <div className="bg-fg" style={{ width: `${owePct}%` }} />
+              <div className="bg-blue-600" style={{ width: `${100 - owePct}%` }} />
             </>
           )}
         </div>
         <p className="mt-2 text-[12.5px] text-fg-subtle">Across all your groups. Only payments verified on Mezo testnet reduce these numbers.</p>
+      </div>
+    </Panel>
+  );
+}
+
+/** The MUSD behind your payments: wallet balance and, if you have one, your Mezo trove's health. */
+function MusdSource({ address, owes }: { address: string; owes: bigint }) {
+  const { data: pos, isLoading, isError } = useMezoPosition(address);
+  if (isError) return null;
+  if (isLoading || !pos) return <Skeleton className="h-[96px]" />;
+  const t = pos.trove;
+  const band = healthBand(t.ratio, pos.params);
+  const short = owes > pos.balances.musd ? owes - pos.balances.musd : 0n;
+  return (
+    <Panel>
+      <div className="grid gap-px bg-line sm:grid-cols-[1fr_1fr_1.4fr]">
+        <div className="bg-paper p-5">
+          <div className="text-[13px] text-fg-muted">MUSD in your wallet</div>
+          <div className="num mt-1 font-display text-[24px] font-semibold">
+            <Amount value={pos.balances.musd} />
+          </div>
+          <div className="mt-1 text-[12.5px] text-fg-subtle">{short > 0n ? <>You&apos;re <Amount value={short} /> short of what you owe</> : "Enough to cover what you owe"}</div>
+        </div>
+        <div className="bg-paper p-5">
+          <div className="text-[13px] text-fg-muted">BTC</div>
+          <div className="num mt-1 font-display text-[24px] font-semibold">{btc(pos.balances.btc, 5)}</div>
+          <div className="mt-1 text-[12.5px] text-fg-subtle">Swap it for MUSD on Mezo Pools</div>
+        </div>
+        <div className="flex items-start justify-between gap-3 bg-paper p-5">
+          <div>
+            <div className="text-[13px] text-fg-muted">Mezo trove</div>
+            {t.active ? (
+              <>
+                <div className="num mt-1 font-display text-[24px] font-semibold">{pct(t.ratio)}</div>
+                <div className="mt-1 text-[12.5px] text-fg-subtle">
+                  {btc(t.coll, 4)} backs <Amount value={t.debt} unit={false} /> MUSD. Liquidation below {t.liquidationPrice ? usd(t.liquidationPrice) : "—"}.
+                </div>
+              </>
+            ) : (
+              <div className="mt-1 text-[13.5px] text-fg-muted">No trove. Lock BTC to borrow MUSD at {(pos.newTroveRateBps / 100).toFixed(2)}% APR.</div>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {t.active && <Badge tone={band === "healthy" ? "mint" : band === "watch" ? "sky" : "rose"}>{band === "healthy" ? "Healthy" : band === "watch" ? "Watch" : "At risk"}</Badge>}
+            <Link href="/wallet" className="text-[13px] font-medium text-blue-600 hover:underline">
+              {t.active ? "Manage" : "Get MUSD"}
+            </Link>
+          </div>
+        </div>
       </div>
     </Panel>
   );
@@ -87,7 +138,7 @@ function Onboarding({ hasGroup }: { hasGroup: boolean }) {
       <ol className="mt-4 space-y-3">
         {steps.map((s, i) => (
           <li key={i} className="flex items-center gap-3 text-[14.5px]">
-            {s.done ? <CheckCircle2 className="size-5 text-mint-400" /> : <Circle className="size-5 text-fg-subtle" />}
+            {s.done ? <CheckCircle2 className="size-5 text-blue-600" /> : <Circle className="size-5 text-fg-subtle" />}
             <span className={s.done ? "text-fg-muted line-through decoration-fg-subtle/50" : "text-fg"}>{s.label}</span>
           </li>
         ))}
@@ -104,7 +155,7 @@ function Onboarding({ hasGroup }: { hasGroup: boolean }) {
       </div>
       <p className="mt-4 text-[13px] text-fg-subtle">
         Need testnet funds? Get test BTC for gas from the{" "}
-        <a className="text-violet-300 hover:underline" href="https://faucet.test.mezo.org/" target="_blank" rel="noreferrer">
+        <a className="text-blue-600 hover:underline" href="https://faucet.test.mezo.org/" target="_blank" rel="noreferrer">
           Mezo faucet
         </a>
         , then borrow MUSD at testnet.mezo.org.
@@ -128,7 +179,7 @@ function DashboardInner() {
       </div>
     );
   }
-  if (error || !data) return <Panel className="p-6 text-rose-400">Couldn&apos;t load your dashboard. Refresh to try again.</Panel>;
+  if (error || !data) return <Panel className="p-6 text-fg">Couldn&apos;t load your dashboard. Refresh to try again.</Panel>;
   const p = data.profiles;
   const owes = BigInt(data.totals.owes);
   const owed = BigInt(data.totals.owed);
@@ -162,7 +213,7 @@ function DashboardInner() {
           <PositionStrip owes={owes} owed={owed} />
 
           {data.inFlight.length > 0 && (
-            <Panel className="border-sky-400/30">
+            <Panel className="border-blue-600/30">
               <PanelHeader title="Payments in progress" description="These need a signature, are waiting for confirmation, or need a re-check." />
               <ul className="divide-y divide-line px-5 pb-3">
                 {data.inFlight.map((s) => (
@@ -172,7 +223,7 @@ function DashboardInner() {
                     </span>
                     <span className="flex items-center gap-3">
                       <SettlementStatusPill status={s.status} />
-                      <Link href={`/settlements/${s.id}`} className="text-[13px] text-violet-300 hover:underline">
+                      <Link href={`/settlements/${s.id}`} className="text-[13px] text-blue-600 hover:underline">
                         Open
                       </Link>
                     </span>
@@ -188,7 +239,7 @@ function DashboardInner() {
                 title="Settle up"
                 description={data.myDebts.length ? "Suggested payments that clear what you owe." : undefined}
                 action={
-                  <Link href="/history" className="text-[13px] text-violet-300 hover:underline">
+                  <Link href="/history" className="text-[13px] text-blue-600 hover:underline">
                     History
                   </Link>
                 }
@@ -208,7 +259,7 @@ function DashboardInner() {
                         <div className="text-[12.5px] text-fg-subtle">{d.groupName}</div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Amount value={d.amount} className="font-semibold text-amber-300" />
+                        <Amount value={d.amount} className="font-semibold text-fg" />
                         <Button size="sm" asChild>
                           <Link href={`/groups/${d.groupId}/settle?to=${d.to}&amount=${d.amount}`}>Pay</Link>
                         </Button>
@@ -223,7 +274,7 @@ function DashboardInner() {
               <PanelHeader
                 title="Requests for you"
                 action={
-                  <Link href="/requests" className="text-[13px] text-violet-300 hover:underline">
+                  <Link href="/requests" className="text-[13px] text-blue-600 hover:underline">
                     All requests
                   </Link>
                 }
@@ -258,11 +309,13 @@ function DashboardInner() {
             </Panel>
           </div>
 
+          {address && <MusdSource address={address} owes={owes} />}
+
           <Panel>
             <PanelHeader
               title="Groups"
               action={
-                <Link href="/groups" className="text-[13px] text-violet-300 hover:underline">
+                <Link href="/groups" className="text-[13px] text-blue-600 hover:underline">
                   All groups
                 </Link>
               }
@@ -270,9 +323,9 @@ function DashboardInner() {
             <ul className="divide-y divide-line px-5 pb-3">
               {data.groups.slice(0, 6).map((g) => (
                 <li key={g.id}>
-                  <Link href={`/groups/${g.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 hover:bg-ink-800/60">
+                  <Link href={`/groups/${g.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 py-3 hover:bg-wash">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid size-9 place-items-center rounded-xl border border-line-strong bg-ink-800 text-violet-300">
+                      <span className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-line bg-blue-50 text-blue-600">
                         <Users className="size-4" />
                       </span>
                       <div className="min-w-0">
@@ -305,7 +358,7 @@ function DashboardInner() {
                 <ul className="divide-y divide-line px-5 pb-3">
                   {data.recentExpenses.map((e) => (
                     <li key={e.id}>
-                      <Link href={`/groups/${e.groupId}/expenses/${e.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 hover:bg-ink-800/60">
+                      <Link href={`/groups/${e.groupId}/expenses/${e.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 hover:bg-wash/60">
                         <div className="flex min-w-0 items-center gap-3">
                           <Avatar address={e.payer} profile={p[e.payer]} size={28} />
                           <div className="min-w-0">
@@ -342,7 +395,7 @@ function DashboardInner() {
                           {s.txHash && <TxLink hash={s.txHash} />}
                         </div>
                         <Link href={`/settlements/${s.id}`}>
-                          <Amount value={s.amount} className="text-mint-400" />
+                          <Amount value={s.amount} className="text-blue-600" />
                         </Link>
                       </li>
                     ))}
@@ -358,7 +411,7 @@ function DashboardInner() {
                     {data.upcoming.map((r) => (
                       <li key={r.id} className="flex items-center justify-between gap-3 py-2.5 text-[13.5px]">
                         <div className="flex min-w-0 items-center gap-2.5">
-                          <CalendarClock className="size-4 text-violet-300" />
+                          <CalendarClock className="size-4 text-blue-600" />
                           <div className="min-w-0">
                             <div className="truncate font-medium">{r.title}</div>
                             <div className="text-[12px] text-fg-subtle">

@@ -336,8 +336,8 @@ export const musdSplitSettlementAbi = [
 
 export const MUSD_SPLIT_SETTLEMENT_DEPLOYMENT = {
   chainId: 31611,
-  address: "0x2d2F57887fA5a970344CeA9f1176BB761aFc2602" as const,
-  txHash: "0x1b9b0ddba43525b1fb363642f869011216440c7701b5997858e647002a48cc86" as const,
-  blockNumber: 16372569,
-  deployer: "0x10ac9924a78051BdD770978740C5084205cdB628" as const,
+  address: "0x07A97685C16fCd717a66c7cCf974fFfB6f8c2607" as const,
+  txHash: "0x31ba10555bd04fb76c8345fcfe4db58546920e55aa3985aebbe5671f83b5d5be" as const,
+  blockNumber: 16776210,
+  deployer: "0xB3A78E23993cc416DF79c8E954e427Ef15063b20" as const,
 } as const;

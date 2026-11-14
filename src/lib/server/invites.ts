@@ -2,7 +2,7 @@ import "server-only";
 import { LIMITS } from "@/config/app";
 import { q, q1, withTx } from "./db";
 import { notify, recordActivity } from "./events";
-import { isAdmin, requireMember } from "./groups";
+import { UUID_RE, isAdmin, requireMember } from "./groups";
 import { ApiError, conflict, forbidden, notFound } from "./http";
 import { ensureUser, getProfiles } from "./users";
 
@@ -84,6 +84,7 @@ export async function listInvites(groupId: string, actor: string) {
 
 export async function revokeInvite(groupId: string, inviteId: string, actor: string) {
   const { membership } = await requireMember(groupId, actor);
+  if (!UUID_RE.test(inviteId)) throw notFound("Invite not found");
   return withTx(async (c) => {
     const inv = await q1<InviteRow>(`SELECT * FROM split.invites WHERE id = $1 AND group_id = $2 FOR UPDATE`, [inviteId, groupId], c);
     if (!inv) throw notFound("Invite not found");
@@ -130,6 +131,8 @@ export async function acceptInvite(token: string, actor: string) {
       c,
     );
     if (existing?.status === "active") return { groupId: inv.group_id, alreadyMember: true };
+    const grp = await q1<{ archived_at: Date | null }>(`SELECT archived_at FROM split.groups WHERE id = $1`, [inv.group_id], c);
+    if (!grp || grp.archived_at) throw new ApiError(410, "GROUP_ARCHIVED", "This group was archived, so it can't be joined.");
     const state = inviteState(inv);
     if (state !== "active") {
       const msg = { revoked: "This invite was revoked", expired: "This invite has expired", used_up: "This invite has reached its limit" }[state];
@@ -150,7 +153,7 @@ export async function acceptInvite(token: string, actor: string) {
     await q(
       `INSERT INTO split.group_members (group_id, address, role, status, invite_id)
        VALUES ($1, $2, 'member', 'active', $3)
-       ON CONFLICT (group_id, address) DO UPDATE SET status = 'active', left_at = NULL, joined_at = now(), invite_id = EXCLUDED.invite_id`,
+       ON CONFLICT (group_id, address) DO UPDATE SET status = 'active', role = 'member', left_at = NULL, joined_at = now(), invite_id = EXCLUDED.invite_id`,
       [inv.group_id, actor, inv.id],
       c,
     );

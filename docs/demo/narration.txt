@@ -1,0 +1,28 @@
+[4.5s] This is MUSD Split. Split the bill, and settle it in MUSD, on Mezo.
+[12.4s] MUSD Split is a shared ledger for trips, flats and dinners. It works out who owes whom, and settles every debt in MUSD on the Mezo network.
+[23.6s] Here is a real example. Six friends on a trip end up with fourteen separate debts. One click, and the app reduces them to just five payments that settle everyone.
+[37.3s] This strip is live from the chain: the latest Mezo block, and the contracts the app uses.
+[46.2s] There are three ways to pay a friend, and all of them run on Mezo. Pay with MUSD you already hold. Swap Bitcoin for exactly what you owe on Mezo Pools. Or borrow MUSD against your Bitcoin, at the moment you pay.
+[64.7s] It works in four steps. Create a group. Record expenses. See who owes whom. And settle in MUSD.
+[77.2s] An expense is not a payment. A debt only shrinks when our server has fetched the transaction from Mezo, and checked the sender, the recipient, the exact amount, and the protocol events.
+[92.7s] And everything a shared ledger needs is built in: four split methods, exact to the cent, receipts, recurring bills, payment requests, and a full audit trail.
+[105.8s] Let's try it. Dave connects his wallet, and signs in with a free signature. No funds move.
+[117.0s] His dashboard shows what he owes, what he is owed, and what to settle next.
+[124.8s] Further down, it shows where his MUSD comes from: his wallet balance, and the health of his Mezo trove.
+[136.3s] This is the Lisbon trip. Four friends, and four shared bills, each split equally.
+[143.5s] Adding a bill takes seconds. Dave types what it was for and the amount, and the app shows each person's exact share before he saves.
+[157.8s] Saved. Every share is exact to the cent, and the app tracks whether each one has been paid.
+[168.4s] The balances tab shows each person's position. Alice is owed money, and the others owe.
+[176.9s] The debt map draws it. As recorded, there are many debts. Simplified, there are only a few payments, with exactly the same result.
+[193.9s] Dave owes Alice. He could pay with MUSD from his wallet, but he would rather keep his Bitcoin.
+[201.5s] So he borrows against it. Mezo mints the MUSD from his trove, and sends it straight to Alice, in a single transaction.
+[213.1s] Before signing, he sees his trove's collateral ratio and liquidation price, now and after paying, read live from Mezo.
+[223.4s] He reviews the payment and confirms. His wallet signs once.
+[229.2s] The app saves the transaction immediately, then fetches the receipt from Mezo and verifies it.
+[247.1s] Confirmed on-chain. Dave's debt is cleared only now, and both friends get the same receipt.
+[257.4s] The receipt links to the transaction on the Mezo explorer, so anyone can check it.
+[266.7s] The wallet page manages the trove. Borrow more, add Bitcoin, or repay, with its health shown live.
+[275.4s] Short on MUSD? Swap Bitcoin or MEZO for it on Mezo Pools, priced live, with slippage protection.
+[287.5s] The about page explains who it is for, and how it makes money. Splitting stays free. Revenue comes from borrowing and swap fees, and a Pro plan for groups.
+[303.5s] And the usage page shows live numbers. Every payment counted here was verified on Mezo testnet.
+[314.3s] MUSD Split. Split the bill, settle it in MUSD. Try it now, at musd-split dot vercel dot app.

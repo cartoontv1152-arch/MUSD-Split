@@ -14,7 +14,7 @@ export interface Me extends Profile {
 }
 
 export type SettlementStatus = "created" | "submitted" | "delayed" | "confirmed" | "failed" | "rejected" | "cancelled";
-export type SettlementMethod = "direct" | "contract" | "contract_permit" | "batch" | "batch_permit";
+export type SettlementMethod = "direct" | "contract" | "contract_permit" | "trove" | "batch" | "batch_permit";
 
 export interface Settlement {
   id: string;

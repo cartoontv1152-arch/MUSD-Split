@@ -1,21 +1,21 @@
 {
   "chainId": 31611,
   "contract": "MUSDSplitSettlement",
-  "address": "0x2d2F57887fA5a970344CeA9f1176BB761aFc2602",
-  "txHash": "0x1b9b0ddba43525b1fb363642f869011216440c7701b5997858e647002a48cc86",
-  "blockNumber": 16372569,
+  "address": "0x07A97685C16fCd717a66c7cCf974fFfB6f8c2607",
+  "txHash": "0x31ba10555bd04fb76c8345fcfe4db58546920e55aa3985aebbe5671f83b5d5be",
+  "blockNumber": 16776210,
   "gasUsed": "750000",
-  "deployer": "0x10ac9924a78051BdD770978740C5084205cdB628",
+  "deployer": "0xB3A78E23993cc416DF79c8E954e427Ef15063b20",
   "musd": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
-  "deployedAt": "2026-10-26T02:46:50.180Z",
+  "deployedAt": "2026-11-14T13:30:57.038Z",
   "compiler": {
     "version": "0.8.28",
     "evmVersion": "london",
     "optimizerRuns": 200
   },
   "explorer": {
-    "address": "https://explorer.test.mezo.org/address/0x2d2F57887fA5a970344CeA9f1176BB761aFc2602",
-    "tx": "https://explorer.test.mezo.org/tx/0x1b9b0ddba43525b1fb363642f869011216440c7701b5997858e647002a48cc86"
+    "address": "https://explorer.test.mezo.org/address/0x07A97685C16fCd717a66c7cCf974fFfB6f8c2607",
+    "tx": "https://explorer.test.mezo.org/tx/0x31ba10555bd04fb76c8345fcfe4db58546920e55aa3985aebbe5671f83b5d5be"
   }
 }
 

@@ -25,26 +25,26 @@ import { formatDateTime, relativeTime } from "@/lib/client/cn";
 import type { Activity, Profiles } from "@/lib/client/types";
 
 const ICON: Record<string, [LucideIcon, string]> = {
-  group_created: [Sparkles, "text-violet-300"],
+  group_created: [Sparkles, "text-blue-600"],
   group_updated: [Settings2, "text-fg-muted"],
-  member_joined: [UserPlus, "text-cyan-300"],
+  member_joined: [UserPlus, "text-blue-600"],
   member_left: [LogOut, "text-fg-muted"],
   member_removed: [LogOut, "text-fg-muted"],
   invite_created: [Link2, "text-fg-muted"],
   invite_revoked: [Link2, "text-fg-muted"],
-  expense_added: [Receipt, "text-violet-300"],
+  expense_added: [Receipt, "text-blue-600"],
   expense_edited: [Pencil, "text-fg-muted"],
-  expense_deleted: [Trash2, "text-rose-400"],
-  expense_adjusted: [Scale, "text-amber-300"],
-  payment_requested: [HandCoins, "text-amber-300"],
+  expense_deleted: [Trash2, "text-fg"],
+  expense_adjusted: [Scale, "text-fg"],
+  payment_requested: [HandCoins, "text-fg"],
   payment_request_cancelled: [XCircle, "text-fg-muted"],
   payment_request_declined: [XCircle, "text-fg-muted"],
-  settlement_initiated: [Send, "text-sky-400"],
-  settlement_confirmed: [CheckCircle2, "text-mint-400"],
-  settlement_failed: [XCircle, "text-rose-400"],
-  settlement_rejected: [AlertTriangle, "text-rose-400"],
-  recurring_created: [CalendarClock, "text-violet-300"],
-  recurring_run: [CalendarClock, "text-violet-300"],
+  settlement_initiated: [Send, "text-blue-600"],
+  settlement_confirmed: [CheckCircle2, "text-blue-600"],
+  settlement_failed: [XCircle, "text-fg"],
+  settlement_rejected: [AlertTriangle, "text-fg"],
+  recurring_created: [CalendarClock, "text-blue-600"],
+  recurring_run: [CalendarClock, "text-blue-600"],
 };
 
 function Sentence({ a, profiles, me }: { a: Activity; profiles: Profiles; me: string }) {
@@ -161,7 +161,7 @@ export function ActivityFeed({ items, profiles, me, showGroup }: { items: Activi
         const tx = (a.data as { txHash?: string }).txHash;
         return (
           <li key={a.id} className="relative flex gap-3 py-3 before:absolute before:top-10 before:bottom-0 before:left-[15px] before:w-px before:bg-line last:before:hidden">
-            <span className={`relative z-[1] grid size-8 shrink-0 place-items-center rounded-full border border-line-strong bg-ink-800 ${color}`}>
+            <span className={`relative z-[1] grid size-8 shrink-0 place-items-center rounded-full border border-line-strong bg-wash ${color}`}>
               <Icon className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0 pt-1 text-[13.5px] leading-relaxed text-fg-muted">

@@ -14,7 +14,7 @@ export default function GlobalRouteError({ error, reset }: { error: Error & { di
           Your funds and records are safe — nothing is changed by a page error. Try again, or reload the page.
           {error.digest ? ` (ref ${error.digest})` : ""}
         </p>
-        <button onClick={reset} className="mt-6 rounded-[10px] bg-violet-600 px-4 py-2.5 text-[14px] font-medium text-white hover:bg-violet-500">Try again</button>
+        <button onClick={reset} className="mt-6 rounded-[10px] bg-blue-600 px-4 py-2.5 text-[14px] font-medium text-white hover:bg-blue-600">Try again</button>
       </div>
     </main>
   );

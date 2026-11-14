@@ -3,8 +3,8 @@
  *
  *   BASE_URL=http://localhost:3000 npm run e2e:testnet
  *
- * Test wallets are read at runtime from E2E_WALLETS_FILE (default: the session scratchpad
- * test-wallets.json, key "split": alice / bob / charlie). Keys are never printed or stored.
+ * Test wallets are read at runtime from E2E_WALLETS_FILE (default: ./.env.e2e-wallets.json, gitignored).
+ * Create + fund them with `npx tsx scripts/testnet-wallets.ts fund`. Keys are never printed.
  *
  * Covers spec §12 UAT: Alice creates a group, invites Bob & Charlie with an invite token, adds a
  * 90 MUSD expense split equally (30 each), Bob settles 30 MUSD with a real transfer, the app
@@ -12,6 +12,7 @@
  * feed records the tx. Plus negative cases and the settlement contract (permit + batch).
  */
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   createPublicClient,
   createWalletClient,
@@ -28,9 +29,7 @@ import { mezoTestnet } from "../src/config/chains";
 import { MUSD, SETTLEMENT_CONTRACT, musdAbi } from "../src/config/contracts";
 
 const BASE = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-const WALLETS =
-  process.env.E2E_WALLETS_FILE ??
-  "C:/Users/nikku/AppData/Local/Temp/claude/C--Users-nikku-Desktop/120e793a-eda2-49e5-92e3-e45940332298/scratchpad/test-wallets.json";
+const WALLETS = process.env.E2E_WALLETS_FILE ?? path.resolve(__dirname, "../.env.e2e-wallets.json");
 const REFUND = process.env.E2E_REFUND !== "0";
 const U = (n: string) => parseUnits(n, 18);
 

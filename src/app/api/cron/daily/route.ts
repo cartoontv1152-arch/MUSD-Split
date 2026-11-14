@@ -5,7 +5,7 @@ import { expireRequests } from "@/lib/server/requests";
 import { reverifyPending } from "@/lib/server/settlements";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * Daily job (Vercel Cron, Hobby plan = once a day): creates due recurring expenses and reminders

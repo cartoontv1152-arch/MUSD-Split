@@ -74,7 +74,7 @@ export async function listRequestsForGroup(groupId: string) {
 }
 
 export async function getRequest(id: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
   return q1<RequestRow>(`${SELECT} WHERE r.id = $1`, [id]);
 }
 

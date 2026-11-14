@@ -35,14 +35,14 @@ function InviteCard({ invite, groupId, canRevoke }: { invite: Invite; groupId: s
   const [showQr, setShowQr] = useState(false);
   const link = typeof window !== "undefined" ? `${window.location.origin}/join/${invite.token}` : `/join/${invite.token}`;
   useEffect(() => {
-    if (showQr && !qr) void QRCode.toDataURL(link, { margin: 1, width: 360, color: { dark: "#0a0f22", light: "#eceeff" } }).then(setQr);
+    if (showQr && !qr) void QRCode.toDataURL(link, { margin: 1, width: 360, color: { dark: "#000000", light: "#ffffff" } }).then(setQr);
   }, [showQr, qr, link]);
   const active = invite.state === "active";
   return (
-    <li className="rounded-[12px] border border-line-strong bg-ink-900/50 p-4">
+    <li className="rounded-[12px] border border-line-strong bg-wash/50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[13.5px]">
-          <Link2 className="size-4 text-violet-300" />
+          <Link2 className="size-4 text-blue-600" />
           <span className="font-medium">{invite.label || "Invite link"}</span>
           <Badge tone={active ? "mint" : "neutral"}>{active ? "Active" : invite.state.replace("_", " ")}</Badge>
         </div>
@@ -89,7 +89,7 @@ function InviteCard({ invite, groupId, canRevoke }: { invite: Invite; groupId: s
       <Dialog open={showQr} onOpenChange={setShowQr} title="Scan to join" description="Point a phone camera here to open the invite.">
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {qr ? <img src={qr} alt="Invite QR code" className="size-[260px] rounded-xl" /> : <div className="size-[260px] animate-pulse rounded-xl bg-ink-750" />}
+          {qr ? <img src={qr} alt="Invite QR code" className="size-[260px] rounded-xl" /> : <div className="size-[260px] animate-pulse rounded-xl bg-wash-2" />}
         </div>
       </Dialog>
     </li>
@@ -342,7 +342,7 @@ export function RequestRow({ r, me, profiles, onChanged }: { r: PaymentRequest; 
           </Button>
         )}
         {r.status === "paid" && r.paidSettlementId && (
-          <Link href={`/settlements/${r.paidSettlementId}`} className="text-[12.5px] text-violet-300 hover:underline">
+          <Link href={`/settlements/${r.paidSettlementId}`} className="text-[12.5px] text-blue-600 hover:underline">
             Receipt
           </Link>
         )}

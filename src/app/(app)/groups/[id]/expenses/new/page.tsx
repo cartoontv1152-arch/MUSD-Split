@@ -23,7 +23,7 @@ function Inner() {
   const recurring = useSearchParams().get("recurring") === "1";
   const { data: b, isLoading, error } = useGroup(id);
   if (isLoading) return <Skeleton className="h-96" />;
-  if (error || !b) return <p className="text-rose-400">You need to be a member of this group to add expenses.</p>;
+  if (error || !b) return <p className="text-fg">You need to be a member of this group to add expenses.</p>;
   return (
     <>
       <PageHeader

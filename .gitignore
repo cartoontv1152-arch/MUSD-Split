@@ -22,3 +22,7 @@ contracts/coverage/
 coverage/
 .DS_Store
 npm-debug.log*
+
+# local tooling output
+.playwright-mcp/
+docs/demo/raw/

@@ -48,9 +48,9 @@ function Inner() {
   return (
     <>
       <PageHeader title="Payment requests" description="Requests are reminders. A request is only marked paid when a matching MUSD transfer is verified on-chain." />
-      <div role="tablist" className="mb-5 inline-flex rounded-[10px] border border-line-strong bg-ink-900 p-0.5 text-[13.5px]">
+      <div role="tablist" className="mb-5 inline-flex rounded-[10px] border border-line-strong bg-wash p-0.5 text-[13.5px]">
         {(["pending", "done"] as const).map((v) => (
-          <button key={v} role="tab" aria-selected={show === v} onClick={() => setShow(v)} className={cn("rounded-[8px] px-3.5 py-1.5", show === v ? "bg-ink-700 text-fg" : "text-fg-muted")}>
+          <button key={v} role="tab" aria-selected={show === v} onClick={() => setShow(v)} className={cn("rounded-[8px] px-3.5 py-1.5", show === v ? "bg-wash-2 text-fg" : "text-fg-muted")}>
             {v === "pending" ? "Pending" : "Paid & closed"}
           </button>
         ))}

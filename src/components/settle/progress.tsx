@@ -6,23 +6,22 @@ import { Amount, SettlementStatusPill } from "@/components/money";
 import { MemberName, TxLink } from "@/components/identity";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/primitives";
-import { cn } from "@/lib/client/cn";
 import type { Profiles, Settlement } from "@/lib/client/types";
 
 /**
- * Status-first progress card with a 3D flip when verification completes.
- * Text always states the real status; the flip is decoration only.
+ * Status-first progress card. While the server verifies, it shows the live status; once the
+ * receipt is verified it is replaced by the confirmation (a solid blue rule marks "verified").
  */
 export function SettlementProgress({ settlement, step, profiles, me, groupId }: { settlement: Settlement | null; step: string | null; profiles: Profiles; me: string; groupId: string }) {
   const s = settlement;
   const done = s?.status === "confirmed";
   const bad = s && (s.status === "failed" || s.status === "rejected");
   return (
-    <div className="flip-scene">
-      <div className={cn("flip-card relative grid", done && "is-flipped")}>
-        <Panel raised className="flip-face col-start-1 row-start-1 p-6">
+    <div aria-live="polite">
+      {!done && (
+        <Panel raised className="p-6">
           <div className="flex items-center gap-3">
-            {bad ? <XCircle className="size-6 text-rose-400" /> : <Loader2 className="size-6 animate-spin text-violet-300" />}
+            {bad ? <XCircle className="size-6 text-fg" /> : <Loader2 className="size-6 animate-spin text-blue-600" />}
             <div>
               <div className="font-display text-[18px] font-semibold">{bad ? (s.status === "failed" ? "Payment failed" : "Payment not accepted") : "Processing payment"}</div>
               <div className="text-[13.5px] text-fg-muted">{bad ? s.failureReason : (step ?? "Working…")}</div>
@@ -41,7 +40,7 @@ export function SettlementProgress({ settlement, step, profiles, me, groupId }: 
                 </div>
               )}
               {s.status === "submitted" && <p className="text-[12.5px] text-fg-subtle">Safe to leave this page — the payment is tracked and verification continues. You&apos;ll find it on your dashboard.</p>}
-              {s.status === "delayed" && <p className="text-[12.5px] text-amber-300">The network is slow to answer. We keep re-checking; nothing is lost.</p>}
+              {s.status === "delayed" && <p className="text-[12.5px] text-fg">The network is slow to answer. We keep re-checking; nothing is lost.</p>}
             </div>
           )}
           {bad && (
@@ -55,22 +54,24 @@ export function SettlementProgress({ settlement, step, profiles, me, groupId }: 
             </div>
           )}
         </Panel>
-        <Panel raised className="flip-face flip-back col-start-1 row-start-1 border-mint-400/30 p-6">
-          {s && done && (
+      )}
+      {s && done && (
+        <Panel raised className="border-t-4 border-t-blue-600 p-6">
+          {(
             <>
               <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-full bg-mint-400/15">
-                  <CheckCircle2 className="size-6 text-mint-400" />
+                <span className="grid size-11 place-items-center rounded-full bg-blue-600">
+                  <CheckCircle2 className="size-6 text-white" />
                 </span>
                 <div>
                   <div className="font-display text-[19px] font-semibold">Payment confirmed</div>
                   <div className="text-[13.5px] text-fg-muted">Verified on Mezo testnet{s.blockNumber ? ` in block ${Number(s.blockNumber).toLocaleString()}` : ""}.</div>
                 </div>
               </div>
-              <div className="mt-5 rounded-[12px] border border-line bg-ink-900/60 p-4 text-[14px]">
+              <div className="mt-5 rounded-[var(--radius-card)] border border-line bg-wash p-4 text-[14px]">
                 <div className="flex items-center justify-between">
                   <span className="text-fg-muted">Paid</span>
-                  <Amount value={s.amount} className="font-semibold text-mint-400" />
+                  <Amount value={s.amount} className="font-semibold text-blue-600" />
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-fg-muted">To</span>
@@ -80,6 +81,11 @@ export function SettlementProgress({ settlement, step, profiles, me, groupId }: 
                   <span className="text-fg-muted">Tx</span>
                   {s.txHash && <TxLink hash={s.txHash} />}
                 </div>
+                {s.method === "trove" && (
+                  <p className="mt-3 border-t border-line pt-3 text-[13px] text-fg-muted">
+                    Paid with MUSD borrowed against your BTC. It was minted from your Mezo trove straight to them, so your trove debt grew by this amount plus the 0.1% fee.
+                  </p>
+                )}
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Button asChild>
@@ -94,7 +100,7 @@ export function SettlementProgress({ settlement, step, profiles, me, groupId }: 
             </>
           )}
         </Panel>
-      </div>
+      )}
     </div>
   );
 }

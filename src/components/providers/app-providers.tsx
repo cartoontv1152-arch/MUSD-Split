@@ -26,12 +26,12 @@ export function AppProviders({ children, initialState }: { children: ReactNode; 
       <QueryClientProvider client={qc}>
         <SessionProvider>{children}</SessionProvider>
         <Toaster
-          theme="dark"
+          theme="light"
           position="bottom-right"
           toastOptions={{
             classNames: {
-              toast: "!bg-[#131a37] !border !border-[#2f3964] !text-[#eceeff] !rounded-[12px] !shadow-2xl",
-              description: "!text-[#a6acd0]",
+              toast: "!bg-white !border !border-black !text-black !rounded-[8px] !shadow-none",
+              description: "!text-[#404040]",
             },
           }}
         />

@@ -103,7 +103,7 @@ function Inner() {
             <MemberName address={s.to} profiles={p} me={me} withAvatar className="text-fg" />
           </div>
           {s.status !== "confirmed" && (
-            <p className="mx-auto mt-3 max-w-[52ch] text-[13px] text-amber-300">
+            <p className="mx-auto mt-3 max-w-[52ch] text-[13px] text-fg">
               {s.status === "created"
                 ? "No transaction has been recorded for this payment yet."
                 : s.status === "submitted"
@@ -150,7 +150,7 @@ function Inner() {
           <StatRow label="Chain">Mezo testnet (31611)</StatRow>
         </dl>
         {s.status === "confirmed" && (
-          <div className="flex items-center gap-2 border-t border-line bg-mint-400/6 px-6 py-3 text-[12.5px] text-mint-400">
+          <div className="flex items-center gap-2 border-t border-line bg-blue-600/6 px-6 py-3 text-[12.5px] text-blue-600">
             <ShieldCheck className="size-4" /> Verified server-side from the transaction receipt: success status, MUSD Transfer log, sender, recipient and exact amount.
           </div>
         )}

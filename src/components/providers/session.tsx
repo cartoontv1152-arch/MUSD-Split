@@ -104,7 +104,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       mismatch: !!address && isConnected && !!walletAddress && walletAddress.toLowerCase() !== address,
       signIn,
       signOut,
-      openConnect: () => setConnectOpen(true),
+      // a wallet that already authorised this site reconnects silently: go straight to signing in
+      openConnect: () => (isConnected && walletAddress ? void signIn(walletAddress) : setConnectOpen(true)),
       refresh: () => void session.refetch(),
     }),
     [address, session, signingIn, isConnected, walletAddress, signIn, signOut],

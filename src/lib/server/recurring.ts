@@ -8,7 +8,7 @@ import type { recurringCreateSchema } from "@/lib/validation";
 import { q, q1, withTx } from "./db";
 import { notify, recordActivity } from "./events";
 import { createExpense } from "./expenses";
-import { isAdmin, requireMember } from "./groups";
+import { UUID_RE, isAdmin, requireMember } from "./groups";
 import { badRequest, forbidden, notFound } from "./http";
 
 export interface RecurringRow {
@@ -110,6 +110,7 @@ export async function createRecurring(groupId: string, actor: string, input: z.i
 
 export async function setRecurringActive(groupId: string, id: string, actor: string, active: boolean) {
   const { membership } = await requireMember(groupId, actor);
+  if (!UUID_RE.test(id)) throw notFound("Recurring expense not found");
   const r = await q1<RecurringRow>(`${SELECT} WHERE r.id = $1 AND r.group_id = $2`, [id, groupId]);
   if (!r) throw notFound("Recurring expense not found");
   if (!isAdmin(membership.role) && r.created_by !== actor) throw forbidden("Only admins or its creator can change this schedule");

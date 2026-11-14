@@ -52,9 +52,9 @@ function Inner() {
                 <Link
                   href={n.href ?? "#"}
                   onClick={() => !n.readAt && post("/api/notifications", { ids: [n.id] }).then(() => qc.invalidateQueries({ queryKey: ["notifications"] }))}
-                  className="flex gap-3 px-5 py-3.5 hover:bg-ink-800/50"
+                  className="flex gap-3 px-5 py-3.5 hover:bg-wash/50"
                 >
-                  <span className={cn("mt-2 size-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-violet-400")} aria-label={n.readAt ? undefined : "Unread"} />
+                  <span className={cn("mt-2 size-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-blue-600")} aria-label={n.readAt ? undefined : "Unread"} />
                   <span className="min-w-0 flex-1">
                     <span className={cn("block text-[14.5px]", n.readAt ? "text-fg-muted" : "font-medium text-fg")}>{n.title}</span>
                     {n.body && <span className="mt-0.5 block text-[13px] text-fg-muted">{n.body}</span>}

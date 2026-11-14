@@ -23,7 +23,7 @@ export function Amount({
 }) {
   const v = typeof value === "bigint" ? value : BigInt(value || "0");
   const color =
-    tone === "auto" ? (v > 0n ? "text-cyan-300" : v < 0n ? "text-amber-300" : "text-fg-muted") : tone === "owe" ? "text-amber-300" : tone === "owed" ? "text-cyan-300" : "";
+    tone === "auto" ? (v > 0n ? "text-blue-600" : v < 0n ? "text-fg" : "text-fg-muted") : tone === "owe" ? "text-fg" : tone === "owed" ? "text-blue-600" : "";
   return (
     <span className={cn("num whitespace-nowrap", color, className)}>
       {formatAmount(v, { signed, exact })}
@@ -37,22 +37,22 @@ export function NetLabel({ net, className }: { net: string | bigint; className?:
   const v = typeof net === "bigint" ? net : BigInt(net || "0");
   if (v === 0n) return <span className={cn("text-fg-muted", className)}>Settled up</span>;
   return (
-    <span className={cn(v > 0n ? "text-cyan-300" : "text-amber-300", className)}>
+    <span className={cn(v > 0n ? "text-blue-600" : "text-fg", className)}>
       {v > 0n ? "Gets back " : "Owes "}
       <Amount value={v < 0n ? -v : v} />
     </span>
   );
 }
 
-/** Diverging bar centred on zero: amber left = owes, cyan right = should receive. */
+/** Diverging bar centred on zero: black left = owes, blue right = should receive. */
 export function BalanceBar({ net, max, className }: { net: bigint; max: bigint; className?: string }) {
   const pct = max === 0n ? 0 : Number(((net < 0n ? -net : net) * 1000n) / max) / 10;
   return (
-    <div className={cn("relative h-2 w-full rounded-full bg-ink-750", className)} aria-hidden="true">
+    <div className={cn("relative h-1.5 w-full rounded-full bg-wash", className)} aria-hidden="true">
       <div className="absolute top-[-3px] bottom-[-3px] left-1/2 w-px bg-line-strong" />
       {net !== 0n && (
         <div
-          className={cn("absolute top-0 bottom-0 rounded-full", net < 0n ? "right-1/2 bg-amber-400" : "left-1/2 bg-cyan-400")}
+          className={cn("absolute top-0 bottom-0 rounded-full", net < 0n ? "right-1/2 bg-fg" : "left-1/2 bg-blue-600")}
           style={{ width: `${Math.max(2, pct / 2)}%` }}
         />
       )}
@@ -63,7 +63,7 @@ export function BalanceBar({ net, max, className }: { net: bigint; max: bigint; 
 const STATUS: Record<SettlementStatus, { label: string; tone: "mint" | "amber" | "rose" | "violet" | "neutral" | "sky"; Icon: typeof CheckCircle2 }> = {
   created: { label: "Awaiting signature", tone: "neutral", Icon: CircleDashed },
   submitted: { label: "Pending confirmation", tone: "sky", Icon: Hourglass },
-  delayed: { label: "Verification delayed", tone: "amber", Icon: Clock3 },
+  delayed: { label: "Verification delayed", tone: "sky", Icon: Clock3 },
   confirmed: { label: "Confirmed on-chain", tone: "mint", Icon: CheckCircle2 },
   failed: { label: "Failed — reverted", tone: "rose", Icon: XCircle },
   rejected: { label: "Not accepted", tone: "rose", Icon: AlertTriangle },
@@ -97,9 +97,12 @@ export function methodLabel(m: string): string {
       return "Settlement contract";
     case "contract_permit":
       return "Settlement contract (permit)";
+    case "trove":
+      return "Borrowed against BTC (Mezo trove)";
     case "batch":
+      return "Batch settlement (approve)";
     case "batch_permit":
-      return "Batch settlement";
+      return "Batch settlement (permit)";
     default:
       return m;
   }

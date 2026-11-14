@@ -1,108 +1,174 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
-import { ArrowRight, Wallet } from "lucide-react";
+import { useState } from "react";
+import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/providers/session";
-import { EXAMPLE_MEMBERS, EXAMPLE_SIMPLIFIED, EXAMPLE_STATS } from "./example-ledger";
+import { formatAmount } from "@/lib/engine/money";
 import { cn } from "@/lib/client/cn";
+import { EXAMPLE_MEMBERS, EXAMPLE_PAIRWISE, EXAMPLE_SIMPLIFIED, EXAMPLE_STATS } from "./example-ledger";
 
-const DebtConstellation = dynamic(() => import("./debt-constellation"), { ssr: false, loading: () => null });
+const W = 560;
+const H = 440;
+const R_X = 190;
+const R_Y = 160;
+const NODE = 22;
 
-/** Static poster (reduced motion / before WebGL loads): the simplified graph in 2D. */
-function Poster() {
-  const W = 520;
-  const H = 420;
-  const pos = new Map<string, { x: number; y: number }>(
-    EXAMPLE_MEMBERS.map((m, i) => {
-      const a = (i / EXAMPLE_MEMBERS.length) * Math.PI * 2 - Math.PI / 2;
-      return [m, { x: W / 2 + Math.cos(a) * 170, y: H / 2 + Math.sin(a) * 140 }];
-    }),
-  );
+const pos = new Map<string, { x: number; y: number; lx: number; ly: number; anchor: "start" | "middle" | "end" }>(
+  EXAMPLE_MEMBERS.map((m, i) => {
+    const a = (i / EXAMPLE_MEMBERS.length) * Math.PI * 2 - Math.PI / 2;
+    const c = Math.cos(a);
+    // names sit outside the ring so no debt line ever crosses them
+    return [
+      m,
+      {
+        x: W / 2 + c * R_X,
+        y: H / 2 + Math.sin(a) * R_Y,
+        lx: W / 2 + c * (R_X + NODE + 10),
+        ly: H / 2 + Math.sin(a) * (R_Y + NODE + 12) + 4,
+        anchor: Math.abs(c) < 0.2 ? "middle" : c > 0 ? "start" : "end",
+      },
+    ];
+  }),
+);
+
+/** A straight edge from node edge to node edge, so arrowheads land on the circle. */
+function edge(from: string, to: string, inset = NODE + 6) {
+  const a = pos.get(from)!;
+  const b = pos.get(to)!;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  return { x1: a.x + ux * inset, y1: a.y + uy * inset, x2: b.x - ux * inset, y2: b.y - uy * inset, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+}
+
+/**
+ * The product in one picture: the example group's 14 recorded debts (computed by the real engine)
+ * and the 5 payments that settle everyone. The visitor toggles between them.
+ */
+function LedgerDiagram() {
+  const [view, setView] = useState<"recorded" | "simplified">("recorded");
+  const simplified = view === "simplified";
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 m-auto h-full w-full" aria-hidden="true">
-      {EXAMPLE_SIMPLIFIED.map((t) => {
-        const a = pos.get(t.from)!;
-        const b = pos.get(t.to)!;
-        return <path key={t.from + t.to} d={`M${a.x},${a.y} Q${W / 2},${H / 2 - 40} ${b.x},${b.y}`} stroke="#46ddeb" strokeOpacity="0.8" strokeWidth="2.5" fill="none" />;
-      })}
-      {[...pos.entries()].map(([m, p]) => (
-        <g key={m}>
-          <circle cx={p.x} cy={p.y} r="26" fill="#8a6cff" fillOpacity="0.18" />
-          <circle cx={p.x} cy={p.y} r="12" fill="#8a6cff" />
-          <text x={p.x} y={p.y + 34} textAnchor="middle" fontSize="12" fill="#a6acd0">
-            {m}
-          </text>
+    <figure className="surface rounded-[var(--radius-panel)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+        <figcaption className="text-[13px] text-fg-muted">Example: a 6-person trip, {formatAmount(EXAMPLE_STATS.total, { fractionDigits: 0 })} MUSD of bills</figcaption>
+        <div role="tablist" aria-label="Debt view" className="inline-flex rounded-[var(--radius-control)] border border-line-strong p-0.5 text-[13px]">
+          {(
+            [
+              ["recorded", `As recorded (${EXAMPLE_STATS.pairwise})`],
+              ["simplified", `Simplified (${EXAMPLE_STATS.simplified})`],
+            ] as const
+          ).map(([v, label]) => (
+            <button
+              key={v}
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => setView(v)}
+              className={cn("rounded-[6px] px-3 py-1.5 font-medium transition-colors", view === v ? "bg-fg text-white" : "text-fg-muted hover:text-fg")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={simplified ? `${EXAMPLE_STATS.simplified} payments settle everyone` : `${EXAMPLE_STATS.pairwise} debts as recorded`}>
+        <defs>
+          <marker id="arrow-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="#000" />
+          </marker>
+          <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="#002fa7" />
+          </marker>
+        </defs>
+        <g className="transition-opacity duration-500" opacity={simplified ? 0.12 : 1}>
+          {EXAMPLE_PAIRWISE.map((t) => {
+            const e = edge(t.from, t.to);
+            return <line key={`p-${t.from}-${t.to}`} {...e} stroke="#000" strokeWidth="1.25" markerEnd="url(#arrow-ink)" />;
+          })}
         </g>
-      ))}
-    </svg>
+        <g className="transition-opacity duration-500" opacity={simplified ? 1 : 0}>
+          {EXAMPLE_SIMPLIFIED.map((t) => {
+            const e = edge(t.from, t.to);
+            return (
+              <g key={`s-${t.from}-${t.to}`}>
+                <line {...e} stroke="#002fa7" strokeWidth="3.5" markerEnd="url(#arrow-blue)" />
+                <rect x={e.mx - 30} y={e.my - 12} width="60" height="22" rx="4" fill="#fff" stroke="#002fa7" />
+                <text x={e.mx} y={e.my + 4} textAnchor="middle" fontSize="12" fontWeight="600" fill="#002fa7" className="num">
+                  {formatAmount(t.amount, { fractionDigits: 0 })}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+        {[...pos.entries()].map(([m, p]) => (
+          <g key={m}>
+            <circle cx={p.x} cy={p.y} r={NODE} fill="#fff" stroke="#000" strokeWidth="1.5" />
+            <text x={p.x} y={p.y + 5} textAnchor="middle" fontSize="14" fontWeight="600" fill="#000">
+              {m.slice(0, 1)}
+            </text>
+            <text x={p.lx} y={p.ly} textAnchor={p.anchor} fontSize="12.5" fill="#404040">
+              {m}
+            </text>
+          </g>
+        ))}
+      </svg>
+      <p className="border-t border-line px-4 py-3 text-[13px] text-fg-muted">
+        {simplified
+          ? `${EXAMPLE_STATS.simplified} MUSD payments square everyone up. Each person ends up exactly where the 14 debts said they should.`
+          : `${EXAMPLE_STATS.pairwise} separate debts between six people. Nobody wants to pay all of these.`}
+      </p>
+    </figure>
   );
 }
 
 export function Hero() {
   const { address, openConnect } = useSession();
-  const [phase, setPhase] = useState<"tangled" | "simplifying" | "simplified">("tangled");
-  // null on the server / first paint, then the live reduced-motion preference
-  const motion = useSyncExternalStore<boolean | null>(
-    (cb) => {
-      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-      mq.addEventListener("change", cb);
-      return () => mq.removeEventListener("change", cb);
-    },
-    () => !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    () => null,
-  );
-  const simplified = motion === false || phase === "simplified";
-
   return (
-    <section className="relative overflow-hidden">
-      <div className="hairline-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_70%_40%,black,transparent_70%)]" />
-      <div className="relative mx-auto grid max-w-[1240px] items-center gap-6 px-4 pt-10 pb-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:pt-16">
-        <div className="relative z-10">
-          <h1 className="font-display text-[44px] leading-[0.98] font-bold tracking-[-0.035em] text-fg sm:text-[60px] lg:text-[68px]">
-            Shared costs,
-            <br />
-            settled on-chain.
-          </h1>
-          <p className="mt-6 max-w-[46ch] text-[17px] leading-relaxed text-fg-muted">
-            MUSD Split tracks who paid for what, untangles the group&apos;s debts into the fewest payments, and settles each one with a real MUSD transfer on
-            Mezo — verified before anyone&apos;s balance moves.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            {address ? (
-              <Button size="lg" asChild>
-                <Link href="/dashboard">
-                  Open your dashboard <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            ) : (
-              <Button size="lg" onClick={openConnect}>
-                <Wallet className="size-4" /> Connect wallet
-              </Button>
-            )}
-            <Button size="lg" variant="outline" asChild>
-              <a href="#how">How it works</a>
+    <section className="mx-auto grid max-w-[1240px] items-center gap-12 px-4 pt-14 pb-16 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:pt-20 lg:pb-24">
+      <div>
+        <h1 className="font-display text-[44px] leading-[0.98] font-bold tracking-[-0.035em] sm:text-[64px]">
+          Split the bill.
+          <br />
+          Settle it in MUSD.
+        </h1>
+        <p className="mt-6 max-w-[48ch] text-[17px] leading-relaxed text-fg-muted">
+          A shared ledger for trips, flats and dinners. It works out the fewest payments that square everyone up, and settles them in MUSD on Mezo. A debt only
+          clears once the payment is verified on-chain.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          {address ? (
+            <Button size="lg" asChild>
+              <Link href="/dashboard">Open your dashboard</Link>
             </Button>
-          </div>
-          <p className="mt-5 text-[13px] text-fg-subtle">Runs on Mezo testnet. Non-custodial — your MUSD only moves when you approve it.</p>
+          ) : (
+            <Button size="lg" onClick={openConnect}>
+              <Wallet className="size-4" /> Connect a wallet
+            </Button>
+          )}
+          <Button size="lg" variant="secondary" asChild>
+            <a href="#pay">Ways to pay</a>
+          </Button>
         </div>
-
-        <div className="relative">
-          <div className="relative aspect-[5/4] w-full lg:-mr-16 lg:aspect-[6/5] lg:w-[calc(100%+4rem)]">
-            {motion === null ? null : motion ? <DebtConstellation onPhase={setPhase} /> : <Poster />}
+        <dl className="mt-10 grid max-w-[520px] grid-cols-3 border-t border-line pt-5 text-[13px]">
+          <div>
+            <dt className="text-fg-subtle">Pay with</dt>
+            <dd className="mt-1 font-medium">MUSD you hold</dd>
           </div>
-          <div className="glass relative z-10 mx-auto -mt-6 flex w-fit max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-full px-5 py-2.5 text-[13px]" aria-live="polite">
-            <span className="text-fg-subtle">Example group · {EXAMPLE_STATS.members} friends</span>
-            <span className={cn("transition-colors", simplified ? "text-fg-subtle line-through decoration-fg-subtle/60" : "text-violet-300")}>
-              {EXAMPLE_STATS.pairwise} debts as recorded
-            </span>
-            <ArrowRight className="size-3.5 text-fg-subtle" aria-hidden="true" />
-            <span className={cn("font-medium transition-colors", simplified ? "text-cyan-300" : "text-fg-muted")}>{EXAMPLE_STATS.simplified} payments to settle everyone</span>
+          <div>
+            <dt className="text-fg-subtle">Or swap</dt>
+            <dd className="mt-1 font-medium">BTC on Mezo Pools</dd>
           </div>
-        </div>
+          <div>
+            <dt className="text-fg-subtle">Or borrow</dt>
+            <dd className="mt-1 font-medium">against your BTC</dd>
+          </div>
+        </dl>
       </div>
+      <LedgerDiagram />
     </section>
   );
 }

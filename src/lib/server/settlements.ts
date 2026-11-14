@@ -2,6 +2,7 @@ import "server-only";
 import { getAddress, parseAbiItem, toHex, type Hex } from "viem";
 import { LIMITS } from "@/config/app";
 import { MUSD, SETTLEMENT_CONTRACT } from "@/config/contracts";
+import { MEZO_PROTOCOL } from "@/config/mezo";
 import { verifyPaymentReceipt, type ExpectedPayment, type VerifyResult } from "@/lib/chain/verify";
 import {
   checkSettlementIntent,
@@ -17,7 +18,10 @@ import { SETTLEMENT_SELECT, loadLedger, requireMember, type SettlementRow } from
 import { ApiError, badRequest, conflict, forbidden, notFound } from "./http";
 import { getProfiles } from "./users";
 
-export type IntentMethod = "direct" | "contract" | "contract_permit";
+export type IntentMethod = "direct" | "contract" | "contract_permit" | "trove";
+
+/** Methods without an on-chain settlement id: bound to blocks after the intent instead. */
+const blockBound = (m: string) => m === "direct" || m === "trove";
 
 const name = (p: { displayName: string | null; username: string | null } | undefined, a: string) =>
   p?.displayName || (p?.username ? `@${p.username}` : `${a.slice(0, 6)}…${a.slice(-4)}`);
@@ -29,7 +33,7 @@ function randomKey(): Hex {
 }
 
 export async function getSettlement(id: string, client?: Queryable): Promise<SettlementRow | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
   return q1<SettlementRow>(`${SETTLEMENT_SELECT} WHERE s.id = $1`, [id], client);
 }
 
@@ -46,19 +50,23 @@ async function logEvent(
 }
 
 function expectedFor(s: SettlementRow): ExpectedPayment {
-  const viaContract = s.method !== "direct";
   return {
-    method: viaContract ? "contract" : "direct",
+    method: s.method === "direct" ? "direct" : s.method === "trove" ? "trove" : "contract",
     from: s.from_address,
     to: s.to_address,
     amount: BigInt(s.amount),
     settlementKey: s.settlement_key as Hex,
-    // direct transfers carry no on-chain id, so bind them to blocks after the intent was created
-    minBlock: !viaContract && s.created_block ? BigInt(s.created_block) : undefined,
+    // direct transfers and trove borrows carry no on-chain id, so bind them to blocks after the intent
+    minBlock: blockBound(s.method) && s.created_block ? BigInt(s.created_block) : undefined,
   };
 }
 
-const VERIFY_CTX = { musd: MUSD.address, settlementContract: SETTLEMENT_CONTRACT.address };
+const VERIFY_CTX = {
+  musd: MUSD.address,
+  settlementContract: SETTLEMENT_CONTRACT.address,
+  borrowerOperations: MEZO_PROTOCOL.BorrowerOperations,
+  borrowerOperationsSignatures: MEZO_PROTOCOL.BorrowerOperationsSignatures,
+};
 
 /* ------------------------------------------------------------------ intents */
 
@@ -134,14 +142,16 @@ export async function createSettlementIntent(
     });
     if (!policy.ok) throw conflict(policy.message, policy.code, { max: policy.max.toString() });
 
-    const expenseIds = [...new Set([...(input.expenseIds ?? []), ...(request?.expense_ids ?? [])])];
-    if (expenseIds.length) {
-      const known = new Set(loaded.expenses.map((e) => e.id));
-      if (expenseIds.some((e) => !known.has(e))) throw badRequest("Unknown expense in this group", "UNKNOWN_EXPENSE");
-    }
+    const known = new Set(loaded.expenses.map((e) => e.id));
+    if ((input.expenseIds ?? []).some((e) => !known.has(e))) throw badRequest("Unknown expense in this group", "UNKNOWN_EXPENSE");
+    const expenseIds = [...new Set([...(input.expenseIds ?? []), ...(request?.expense_ids ?? []).filter((e) => known.has(e))])];
 
     const id = crypto.randomUUID();
     const createdBlock = head !== null && head > LIMITS.intentBlockTolerance ? head - LIMITS.intentBlockTolerance : null;
+    // Without a block to bind to, an old unrelated transfer could be claimed for this payment.
+    if (createdBlock === null && blockBound(input.method)) {
+      throw new ApiError(503, "NETWORK_UNAVAILABLE", "The Mezo network can't be reached right now. Try again in a moment.");
+    }
     await q(
       `INSERT INTO split.settlements (id, group_id, from_address, to_address, amount, method, settlement_key, status,
          created_block, payment_request_id, expense_ids, note)
@@ -178,9 +188,25 @@ export async function cancelSettlement(id: string, actor: string) {
 
 /* ------------------------------------------------------------------ submit */
 
-function targetFor(method: SettlementRow["method"]) {
-  return method === "direct" ? MUSD.address : SETTLEMENT_CONTRACT.address;
+/**
+ * An attempt cancelled before any tx was recorded (by the payer, or superseded by a newer attempt)
+ * can still receive its transaction if the wallet broadcast it anyway — the MUSD did move.
+ */
+function isReopenable(s: SettlementRow) {
+  return s.status === "cancelled" && !s.tx_hash && !s.batch_id && (s.failure_code === "SUPERSEDED" || s.failure_code === "CANCELLED");
 }
+
+function targetFor(method: SettlementRow["method"]) {
+  if (method === "direct") return MUSD.address;
+  if (method === "trove") return MEZO_PROTOCOL.BorrowerOperationsSignatures;
+  return SETTLEMENT_CONTRACT.address;
+}
+
+const TARGET_REJECT: Record<string, { code: string; message: string }> = {
+  direct: { code: "NOT_MUSD_TRANSFER", message: "This transaction is not a direct MUSD transfer." },
+  trove: { code: "NOT_TROVE_BORROW", message: "This transaction did not borrow MUSD from a Mezo trove." },
+  contract: { code: "NOT_SETTLEMENT_CONTRACT", message: "This transaction did not call the settlement contract." },
+};
 
 export async function submitSettlementTx(id: string, actor: string, txHash: Hex) {
   const s = await getSettlement(id);
@@ -188,7 +214,7 @@ export async function submitSettlementTx(id: string, actor: string, txHash: Hex)
   if (s.from_address !== actor) throw forbidden("Only the payer can submit a transaction for this payment");
   if (s.batch_id) throw badRequest("This payment is part of a batch — submit the batch transaction", "USE_BATCH");
   if (s.tx_hash === txHash && s.status !== "created") return verifySettlement(id);
-  if (s.status !== "created") throw conflict(`This payment is already ${s.status}`, "ALREADY_SUBMITTED");
+  if (s.status !== "created" && !isReopenable(s)) throw conflict(`This payment is already ${s.status}`, "ALREADY_SUBMITTED");
 
   // Cheap pre-checks so nobody can squat someone else's tx hash.
   const sender = await lookupTxSender(txHash);
@@ -197,10 +223,7 @@ export async function submitSettlementTx(id: string, actor: string, txHash: Hex)
     if (sender.from.toLowerCase() !== actor) {
       reject = { code: "SENDER_MISMATCH", message: "This transaction was sent from a different wallet, so it can't settle your debt." };
     } else if (!sender.to || getAddress(sender.to) !== getAddress(targetFor(s.method))) {
-      reject = {
-        code: s.method === "direct" ? "NOT_MUSD_TRANSFER" : "NOT_SETTLEMENT_CONTRACT",
-        message: s.method === "direct" ? "This transaction is not a direct MUSD transfer." : "This transaction did not call the settlement contract.",
-      };
+      reject = TARGET_REJECT[s.method] ?? TARGET_REJECT.contract;
     }
     if (reject) {
       await logEvent(getPool(), { settlementId: id, from: s.status, to: s.status, txHash, actor, detail: `submit rejected: ${reject.code}` });
@@ -208,7 +231,7 @@ export async function submitSettlementTx(id: string, actor: string, txHash: Hex)
     }
   }
   const used = await q1(
-    `SELECT 1 FROM split.settlements WHERE tx_hash = $1 OR rejected_tx_hash = $1
+    `SELECT 1 FROM split.settlements WHERE tx_hash = $1
      UNION ALL SELECT 1 FROM split.settlement_batches WHERE tx_hash = $1 LIMIT 1`,
     [txHash],
   );
@@ -217,13 +240,14 @@ export async function submitSettlementTx(id: string, actor: string, txHash: Hex)
   try {
     await withTx(async (c) => {
       const r = await q1(
-        `UPDATE split.settlements SET tx_hash=$2, status='submitted', submitted_at=now(), updated_at=now()
-         WHERE id=$1 AND status='created' RETURNING id`,
+        `UPDATE split.settlements SET tx_hash=$2, status='submitted', submitted_at=now(), updated_at=now(),
+           failure_code=NULL, failure_reason=NULL
+         WHERE id=$1 AND (status='created' OR (status='cancelled' AND tx_hash IS NULL AND failure_code IN ('SUPERSEDED','CANCELLED'))) RETURNING id`,
         [id, txHash],
         c,
       );
       if (!r) throw conflict("This payment changed in the meantime. Reload and try again.", "STATE_CHANGED");
-      await logEvent(c, { settlementId: id, from: "created", to: "submitted", txHash, actor });
+      await logEvent(c, { settlementId: id, from: s.status, to: "submitted", txHash, actor, detail: s.status === "cancelled" ? "late tx attached to a cancelled attempt" : undefined });
       await recordActivity(c, s.group_id, actor, "settlement_initiated", {
         settlementId: id,
         from: s.from_address,
@@ -388,6 +412,7 @@ class DuplicateLog extends Error {}
 /* ------------------------------------------------------------------ recovery */
 
 const TRANSFER = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const SETTLED = parseAbiItem("event Settled(bytes32 indexed settlementId, address indexed from, address indexed to, uint256 amount)");
 
 /**
@@ -399,7 +424,7 @@ export async function recoverSettlement(id: string, actor: string, opts: { quiet
   const s = await getSettlement(id);
   if (!s) throw notFound("Payment not found");
   if (s.from_address !== actor) throw forbidden("Only the payer can do this");
-  if (s.status !== "created") return s;
+  if (s.status !== "created" && !isReopenable(s)) return s;
   const pc = publicClient();
   const head = await pc.getBlockNumber();
   const start = s.created_block ? BigInt(s.created_block) : head - 5000n;
@@ -409,18 +434,23 @@ export async function recoverSettlement(id: string, actor: string, opts: { quiet
   let candidate: Hex | null = null;
   for (let lo = from; lo <= head && !candidate; lo += step) {
     const hi = lo + step - 1n > head ? head : lo + step - 1n;
-    if (s.method === "direct") {
+    if (blockBound(s.method)) {
+      // direct: Transfer(payer -> creditor); trove borrow: Transfer(0x0 mint -> creditor) sent by the payer
       const logs = await pc.getLogs({
         address: MUSD.address,
         event: TRANSFER,
-        args: { from: getAddress(s.from_address), to: getAddress(s.to_address) },
+        args: { from: s.method === "trove" ? ZERO_ADDRESS : getAddress(s.from_address), to: getAddress(s.to_address) },
         fromBlock: lo,
         toBlock: hi,
       });
       for (const l of logs) {
         if (l.args.value !== BigInt(s.amount) || !l.transactionHash) continue;
+        if (s.method === "trove") {
+          const sender = await lookupTxSender(l.transactionHash).catch(() => null);
+          if (!sender || sender.from.toLowerCase() !== s.from_address) continue;
+        }
         const used = await q1(
-          `SELECT 1 FROM split.settlements WHERE tx_hash = $1 OR rejected_tx_hash = $1 UNION ALL SELECT 1 FROM split.settlement_batches WHERE tx_hash = $1 LIMIT 1`,
+          `SELECT 1 FROM split.settlements WHERE tx_hash = $1 UNION ALL SELECT 1 FROM split.settlement_batches WHERE tx_hash = $1 LIMIT 1`,
           [l.transactionHash.toLowerCase()],
         );
         if (!used) {
@@ -467,7 +497,7 @@ export interface BatchRow {
 }
 
 export async function getBatch(id: string, client?: Queryable) {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
   const batch = await q1<BatchRow>(
     `SELECT *, total::text AS total, block_number::text AS block_number FROM split.settlement_batches WHERE id = $1`,
     [id],
@@ -481,6 +511,21 @@ export async function getBatch(id: string, client?: Queryable) {
 /** "Settle everything I owe in this group in one transaction" via settleBatch / settleBatchWithPermit. */
 export async function createBatch(groupId: string, actor: string, method: "batch" | "batch_permit") {
   const { group } = await requireMember(groupId, actor);
+  // before superseding unsent attempts, make sure none of them was actually paid on-chain
+  const unsent = await q<{ id: string }>(
+    `SELECT id FROM split.settlements WHERE group_id=$1 AND from_address=$2 AND status='created' AND batch_id IS NULL`,
+    [groupId, actor],
+  );
+  for (const s of unsent) {
+    const found = await recoverSettlement(s.id, actor, { quiet: true }).catch(() => null);
+    if (found && found.status !== "created" && found.status !== "cancelled") {
+      throw conflict(
+        "We found an earlier payment of yours on-chain — it's being verified now, so you don't pay twice.",
+        "EARLIER_PAYMENT_FOUND",
+        { settlementId: s.id },
+      );
+    }
+  }
   const head = await currentBlock();
   return withTx(async (c) => {
     await q(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`settle:${groupId}:${actor}`], c);
@@ -545,7 +590,7 @@ export async function submitBatchTx(batchId: string, actor: string, txHash: Hex)
     throw new ApiError(422, "NOT_SETTLEMENT_CONTRACT", "This transaction did not call the settlement contract.");
   }
   const used = await q1(
-    `SELECT 1 FROM split.settlements WHERE tx_hash = $1 OR rejected_tx_hash = $1 UNION ALL SELECT 1 FROM split.settlement_batches WHERE tx_hash = $1 LIMIT 1`,
+    `SELECT 1 FROM split.settlements WHERE tx_hash = $1 UNION ALL SELECT 1 FROM split.settlement_batches WHERE tx_hash = $1 LIMIT 1`,
     [txHash],
   );
   if (used) throw conflict("This transaction has already been used for a payment.", "TX_ALREADY_USED");

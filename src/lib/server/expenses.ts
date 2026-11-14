@@ -14,7 +14,7 @@ import type { z } from "zod";
 import type { expenseCreateSchema, expenseUpdateSchema } from "@/lib/validation";
 import { q, q1, withTx } from "./db";
 import { notify, recordActivity } from "./events";
-import { EXPENSE_SELECT, isAdmin, loadLedger, requireMember, toLedgerExpense, type ExpenseRow, type GroupRow } from "./groups";
+import { EXPENSE_SELECT, UUID_RE, isAdmin, loadLedger, requireMember, toLedgerExpense, type ExpenseRow, type GroupRow } from "./groups";
 import { ApiError, badRequest, conflict, forbidden, notFound } from "./http";
 import { getProfiles } from "./users";
 
@@ -163,6 +163,7 @@ export async function createExpense(
 }
 
 async function lockExpense(c: PoolClient, groupId: string, expenseId: string): Promise<ExpenseRow> {
+  if (!UUID_RE.test(expenseId)) throw notFound("Expense not found");
   const lock = await q1(`SELECT id FROM split.expenses WHERE id = $1 AND group_id = $2 FOR UPDATE`, [expenseId, groupId], c);
   if (!lock) throw notFound("Expense not found");
   const row = await q1<ExpenseRow>(`${EXPENSE_SELECT} WHERE e.id = $1`, [expenseId], c);

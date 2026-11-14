@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const GET = route<{ id: string; eid: string }>(async (req, { params }) => {
   const s = await requireSession(req);
   const { group, membership } = await requireMember(params.id, s.address);
-  if (!/^[0-9a-f-]{36}$/i.test(params.eid)) throw notFound("Expense not found");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.eid)) throw notFound("Expense not found");
   const e = await q1<ExpenseRow>(`${EXPENSE_SELECT} WHERE e.id = $1 AND e.group_id = $2`, [params.eid, params.id]);
   if (!e) throw notFound("Expense not found");
   const loaded = await loadLedger(group);

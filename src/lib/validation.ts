@@ -25,7 +25,11 @@ export const uuidSchema = z.string().uuid();
 export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
-  .refine((s) => !Number.isNaN(Date.parse(s + "T00:00:00Z")), "Invalid date");
+  .refine((s) => {
+    // round-trip so "2025-02-30" (which JS rolls over to March 2) is rejected, as Postgres would
+    const d = new Date(s + "T00:00:00Z");
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s && d.getUTCFullYear() >= 1970;
+  }, "That date doesn't exist");
 
 export const groupCreateSchema = z.object({
   name: z.string().trim().min(1, "Name your group").max(60),
@@ -80,7 +84,7 @@ export const expenseDeleteSchema = z.object({
   reason: z.string().trim().max(280).optional().nullable(),
 });
 
-export const settlementMethodSchema = z.enum(["direct", "contract", "contract_permit"]);
+export const settlementMethodSchema = z.enum(["direct", "contract", "contract_permit", "trove"]);
 
 export const settlementCreateSchema = z.object({
   to: addressSchema,

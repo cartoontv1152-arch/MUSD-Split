@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const GET = route<{ rid: string }>(async (req, { params }) => {
   const s = await requireSession(req);
-  if (!/^[0-9a-f-]{36}$/i.test(params.rid)) throw notFound("Receipt not found");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.rid)) throw notFound("Receipt not found");
   const meta = await q1<{ group_id: string }>(`SELECT group_id FROM split.receipts WHERE id = $1`, [params.rid]);
   if (!meta) throw notFound("Receipt not found");
   await requireMember(meta.group_id, s.address);

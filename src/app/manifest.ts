@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Split group costs and settle them in MUSD on Mezo.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#0a0f22",
-    theme_color: "#0a0f22",
+    background_color: "#ffffff",
+    theme_color: "#002fa7",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
   };
 }

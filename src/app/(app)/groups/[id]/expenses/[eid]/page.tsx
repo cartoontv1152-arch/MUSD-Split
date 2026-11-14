@@ -83,7 +83,7 @@ function Inner() {
         }
       />
       {e.deletedAt && (
-        <Panel className="mb-5 border-rose-400/30 px-5 py-3 text-[14px] text-rose-300">
+        <Panel className="mb-5 border-fg/30 px-5 py-3 text-[14px] text-fg">
           Deleted {formatDateTime(e.deletedAt)}
           {e.deleteReason ? ` — “${e.deleteReason}”` : ""}. It no longer counts toward balances; its history is kept below.
         </Panel>
@@ -104,12 +104,12 @@ function Inner() {
               </div>
             </div>
             {myShare && e.payer !== me && (
-              <p className="mt-4 rounded-[10px] bg-ink-900/60 px-3 py-2 text-[13.5px] text-fg-muted">
+              <p className="mt-4 rounded-[10px] bg-wash/60 px-3 py-2 text-[13.5px] text-fg-muted">
                 Your share is <Amount value={myShare.share} className="text-fg" />.{" "}
                 {myOutstanding && BigInt(myOutstanding) > 0n ? (
                   <>
-                    <Amount value={myOutstanding} className="text-amber-300" /> of it is still outstanding.{" "}
-                    <Link href={`/groups/${id}/settle?to=${e.payer}&amount=${myOutstanding}&expense=${e.id}`} className="text-violet-300 hover:underline">
+                    <Amount value={myOutstanding} className="text-fg" /> of it is still outstanding.{" "}
+                    <Link href={`/groups/${id}/settle?to=${e.payer}&amount=${myOutstanding}&expense=${e.id}`} className="text-blue-600 hover:underline">
                       Pay it now
                     </Link>
                   </>
@@ -215,7 +215,7 @@ function Inner() {
                   <img src={`/api/receipts/${data.receipt.id}`} alt="Receipt" className="max-h-[360px] w-full rounded-[12px] border border-line object-contain" />
                 </a>
               ) : (
-                <a href={`/api/receipts/${data.receipt.id}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-violet-300 hover:underline">
+                <a href={`/api/receipts/${data.receipt.id}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
                   <FileText className="size-4" /> {data.receipt.filename ?? "Receipt.pdf"}
                 </a>
               )}
